@@ -65,3 +65,39 @@ export type Organization = {
   role?: string;
   created_at: string;
 };
+
+export type OrgSummary = Organization & { role: string };
+
+export type Member = {
+  id: string;
+  user_id: string;
+  email: string;
+  full_name: string;
+  role: string;
+  status: string;
+  created_at: string;
+};
+
+export type Invite = {
+  id: string;
+  email: string;
+  role: string;
+  expires_at: string;
+  invite_token: string;
+};
+
+export const ROLES = [
+  "owner",
+  "admin",
+  "finance_manager",
+  "finance_staff",
+  "viewer",
+] as const;
+
+export function roleLabel(role: string): string {
+  return role.replace(/_/g, " ");
+}
+
+export function canManage(role: string): boolean {
+  return role === "owner" || role === "admin";
+}

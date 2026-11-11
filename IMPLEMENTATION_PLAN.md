@@ -23,6 +23,7 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done & verified (tests r
 - [x] Audit writer: org created, invite created/accepted, role changed (fire-and-log; in-tx audit lands Phase 3)
 - [x] API tests: happy path, invalid input, unauthorized, cross-tenant, token rotation revocation (`services/api/tests`)
 - [x] Frontend: login, register, dashboard shell with org list/create, logout, loading/error/empty states
+- [x] Frontend: org switcher (sidebar select, persisted active org), members table with role change, invite form with one-time link, `/invite` accept page
 - [ ] Email verification + password reset (needs mailer — deferred with Phase 6 notifications)
 
 **Accept:** ✅ two orgs in DB; cross-org 404 tested; permission matrix enforced (403 test); audit rows verified live.
