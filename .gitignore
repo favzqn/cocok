@@ -1,0 +1,22 @@
+# deps / builds
+node_modules/
+.next/
+dist/
+coverage/
+*.tsbuildinfo
+
+# go
+services/api/cmd/server/server
+*.test
+
+# env
+.env
+.env.local
+.env*.local
+
+# logs / os
+*.log
+.DS_Store
+
+# tooling
+.impeccable/config.local.json
