@@ -14,6 +14,7 @@ type Deps struct {
 	Orgs      *OrgHandlers
 	Accounts  *AccountHandlers
 	Imports   *ImportHandlers
+	Recon     *ReconHandlers
 	OrgsSvc   *organizations.Service
 	Log       *slog.Logger
 	WebOrigin string
@@ -83,6 +84,17 @@ func NewRouter(d Deps) http.Handler {
 				r.With(RequirePermission("import:run")).Post("/imports", d.Imports.Upload)
 				r.With(RequirePermission("import:run")).Post("/imports/{importID}/commit", d.Imports.Commit)
 				r.With(RequirePermission("data:view")).Get("/transactions", d.Imports.ListTransactions)
+
+				// Phase 3: reconciliation.
+				r.Route("/reconciliation", func(r chi.Router) {
+					r.With(RequirePermission("reconcile:run")).Post("/runs", d.Recon.Run)
+					r.With(RequirePermission("data:view")).Get("/groups", d.Recon.ListGroups)
+					r.With(RequirePermission("data:view")).Get("/candidates", d.Recon.ListCandidates)
+					r.With(RequirePermission("match:approve")).Post("/groups", d.Recon.ManualMatch)
+					r.With(RequirePermission("match:approve")).Post("/groups/{groupID}/approve", d.Recon.Approve)
+					r.With(RequirePermission("match:approve")).Post("/groups/{groupID}/reject", d.Recon.Reject)
+					r.With(RequirePermission("match:approve")).Post("/groups/{groupID}/unmatch", d.Recon.Unmatch)
+				})
 			})
 		})
 	})

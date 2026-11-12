@@ -7,7 +7,7 @@ import type { OrgSummary, User } from "@/lib/api";
 export const NAV: { label: string; anchor: string | null }[] = [
   { label: "Overview", anchor: "overview" },
   { label: "Transactions", anchor: "transactions" },
-  { label: "Reconciliation", anchor: null },
+  { label: "Reconciliation", anchor: "reconciliation" },
   { label: "Settlements", anchor: null },
   { label: "Financial Accounts", anchor: "accounts" },
   { label: "Integrations", anchor: null },

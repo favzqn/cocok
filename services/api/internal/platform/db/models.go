@@ -69,6 +69,37 @@ type Invitation struct {
 	CreatedAt      time.Time
 }
 
+type MatchCandidate struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	CreditIds      []uuid.UUID
+	DebitIds       []uuid.UUID
+	Score          float64
+	Components     []byte
+	WeightsVersion int32
+	CreatedAt      time.Time
+}
+
+type MatchGroup struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Status         string
+	Kind           string
+	Score          pgtype.Float8
+	WeightsVersion pgtype.Int4
+	Components     []byte
+	CreatedBy      *uuid.UUID
+	CreatedAt      time.Time
+	DecidedAt      *time.Time
+}
+
+type MatchGroupItem struct {
+	ID            uuid.UUID
+	MatchGroupID  uuid.UUID
+	TransactionID uuid.UUID
+	Side          string
+}
+
 type Organization struct {
 	ID               uuid.UUID
 	Name             string
@@ -89,6 +120,15 @@ type OrganizationMember struct {
 	Role           string
 	Status         string
 	CreatedAt      time.Time
+}
+
+type ScoringWeight struct {
+	Version           int32
+	Weights           []byte
+	MinScore          float64
+	AmountToleranceBp int32
+	DateWindowDays    int32
+	CreatedAt         time.Time
 }
 
 type Session struct {

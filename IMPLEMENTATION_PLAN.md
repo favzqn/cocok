@@ -50,8 +50,26 @@ Deferred within Phase 2 (documented):
 - Org timezone override — parse uses Asia/Jakarta (product default) until org settings land.
 
 
-## Phase 3 — Reconciliation engine
-Candidate generation (indexed, no O(n²)) → normalization → scoring (amount/ref/date/counterparty/description, versioned weights) → conflict resolution → match groups (1:1, 1:N, N:1) → approve/reject/unmatch/manual → audit.
+## Phase 3 — Reconciliation ✅
+- [x] Migration: `scoring_weights` (versioned, seed v1), `match_groups` (proposed/approved/rejected; 1:1, 1:N, N:1, manual), `match_group_items`, `match_candidates` + candidate index
+- [x] Candidate generation: indexed SQL pairs (amount band ±100bp, date window ±7d, excludes approved) + bounded N-ary subsets (bucket by counterparty/date, ≤8 members, exact integer sum); pair limit 500, tx scan cap 5000
+- [x] Scoring (`internal/matching`, pure): amount/date/ref/counterparty/description components in [0,1], weighted sum from `scoring_weights`, version stamped on candidates/groups; unit tests
+- [x] Conflict resolution: sort by score (deterministic tie-break) → greedy, each tx joins ≤1 proposed group; re-check under org advisory lock before insert (race-safe)
+- [x] Run replaces previous proposed groups atomically; approved groups untouched
+- [x] Approve / reject (frees txs) / unmatch (deletes group) — all in tx + advisory xact lock per org, audit events `reconciliation.run`, `match.approved/rejected/unmatched/manual`
+- [x] Manual match: explicit tx ids, requires ≥1 credit + ≥1 debit, sum(credits)==sum(debits), conflict if already matched
+- [x] RBAC: `reconcile:run` (run), `match:approve` (manual/approve/reject/unmatch), `data:view` (lists); cross-tenant → 404
+- [x] API tests: run→approve flow, re-run replace, double-approve 409, unmatch frees, manual balanced/one-sided/cross-org, viewer 403, staff run-yet-approve-403, cross-tenant 404, **4-goroutine concurrency → exactly 1 created**
+- [x] Frontend: Reconciliation panel (Run matching, status tabs, approve/reject/unmatch per RBAC), sidebar nav enabled
+
+**Accept:** ✅ `go vet` + `go test ./...` green (unit + integration vs live Postgres); web typecheck green.
+
+Deferred within Phase 3 (documented ceilings):
+- N-ary buckets truncate at 8 members / 5000-tx scan — raise or move to SQL enumeration when volume demands.
+- Weights are DB-versioned but no admin API yet — bump via SQL insert (v2+) until Settings lands (Phase 7).
+- Manual match UI (API + tests exist; table multi-select deferred).
+- Rejected-group history is kept; purging/retention policy deferred to Phase 7.
+
 
 ## Phase 4 — Exceptions & Settlements
 ## Phase 5 — Analytics & Reporting

@@ -170,6 +170,29 @@ export type CanonicalTransaction = {
   created_at: string;
 };
 
+export type MatchGroup = {
+  id: string;
+  status: string;
+  kind: string;
+  score?: number;
+  weights_version?: number;
+  components?: Record<string, number>;
+  credit_tx_ids: string[];
+  debit_tx_ids: string[];
+  created_at: string;
+  decided_at?: string;
+};
+
+// match:approve = owner/admin/finance_manager (mirrors backend RBAC).
+export function canApproveMatches(role: string): boolean {
+  return role === "owner" || role === "admin" || role === "finance_manager";
+}
+
+// reconcile:run = everyone but viewer.
+export function canRunRecon(role: string): boolean {
+  return role !== "viewer";
+}
+
 export function formatMinor(amountMinor: number, currency: string): string {
   const decimals = currency === "IDR" ? 0 : 2;
   const major = amountMinor / 10 ** decimals;

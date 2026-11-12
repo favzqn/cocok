@@ -19,6 +19,7 @@ import (
 	"github.com/cocok/cocok/services/api/internal/organizations"
 	"github.com/cocok/cocok/services/api/internal/platform"
 	db "github.com/cocok/cocok/services/api/internal/platform/db"
+	"github.com/cocok/cocok/services/api/internal/reconciliation"
 	"github.com/cocok/cocok/services/api/migrations"
 )
 
@@ -59,12 +60,14 @@ func run(log *slog.Logger) error {
 	orgSvc := organizations.NewService(queries, pool, audit.OrgAdapter{W: auditWriter})
 	acctSvc := accounts.NewService(queries, pool, auditWriter)
 	impSvc := imports.NewService(queries, pool, auditWriter)
+	reconSvc := reconciliation.NewService(queries, pool, auditWriter)
 
 	router := httpx.NewRouter(httpx.Deps{
 		Auth:      httpx.NewAuthHandlers(authSvc, log, cfg.SessionCookie),
 		Orgs:      httpx.NewOrgHandlers(orgSvc, log),
 		Accounts:  httpx.NewAccountHandlers(acctSvc, log),
 		Imports:   httpx.NewImportHandlers(impSvc, log),
+		Recon:     httpx.NewReconHandlers(reconSvc, log),
 		OrgsSvc:   orgSvc,
 		Log:       log,
 		WebOrigin: cfg.WebOrigin,
