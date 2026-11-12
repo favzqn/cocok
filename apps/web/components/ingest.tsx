@@ -200,10 +200,22 @@ function ImportSection({ org }: { org: OrgSummary }) {
 
   const upload = useMutation({
     mutationFn: async () => {
+      // Re-derive mapping if stale (e.g. file chosen before code reload).
+      let m = mapping;
+      if (!m.date || !m.amount) {
+        const text = await file!.text();
+        const cols = (text.split(/\r?\n/, 1)[0] ?? "")
+          .split(",")
+          .map((s) => s.trim().replace(/^"|"$/g, ""));
+        m = { ...guessMapping(cols), ...m };
+      }
+      if (!m.date || !m.amount) {
+        throw new Error("Map Date and Amount columns before uploading.");
+      }
       const fd = new FormData();
       fd.append("file", file!);
       fd.append("account_id", accountId);
-      fd.append("mapping", JSON.stringify(mapping));
+      fd.append("mapping", JSON.stringify(m));
       const res = await fetch(`${API}/api/v1/organizations/${org.id}/imports`, {
         method: "POST",
         body: fd,
@@ -285,19 +297,24 @@ function ImportSection({ org }: { org: OrgSummary }) {
           </label>
           <button
             type="button"
-            disabled={
-              !accountId ||
-              !file ||
-              !mapping.date ||
-              !mapping.amount ||
-              upload.isPending
-            }
+            disabled={!accountId || !file || upload.isPending}
             onClick={() => upload.mutate()}
             className="inline-flex h-9 items-center justify-center rounded-md bg-[var(--color-navy-900)] px-4 text-sm font-medium text-white hover:bg-[var(--color-navy-800)] disabled:opacity-60"
           >
             {upload.isPending ? "Uploading…" : "Upload & preview"}
           </button>
         </div>
+
+        {!accountId && (
+          <p className="text-xs text-[var(--color-ink-faint)]">
+            Select an account first.
+          </p>
+        )}
+        {file && (!mapping.date || !mapping.amount) && (
+          <p className="text-xs text-[var(--color-alert)]">
+            Map the Date and Amount columns below before uploading.
+          </p>
+        )}
 
         {msg && (
           <p
