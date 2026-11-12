@@ -2,17 +2,18 @@
 
 import type { OrgSummary, User } from "@/lib/api";
 
-export const NAV = [
-  "Overview",
-  "Transactions",
-  "Reconciliation",
-  "Settlements",
-  "Financial Accounts",
-  "Integrations",
-  "Reports",
-  "Audit Logs",
-  "Settings",
-] as const;
+// anchor = section id on the dashboard; null = not built yet (disabled).
+export const NAV: { label: string; anchor: string | null }[] = [
+  { label: "Overview", anchor: "overview" },
+  { label: "Transactions", anchor: "transactions" },
+  { label: "Reconciliation", anchor: null },
+  { label: "Settlements", anchor: null },
+  { label: "Financial Accounts", anchor: "accounts" },
+  { label: "Integrations", anchor: null },
+  { label: "Reports", anchor: null },
+  { label: "Audit Logs", anchor: null },
+  { label: "Settings", anchor: null },
+];
 
 export function Shell({
   user,
@@ -20,6 +21,7 @@ export function Shell({
   activeOrgId,
   onSwitchOrg,
   onLogout,
+  activeItem,
   main,
 }: {
   user?: User;
@@ -27,6 +29,7 @@ export function Shell({
   activeOrgId?: string;
   onSwitchOrg?: (id: string) => void;
   onLogout?: () => void;
+  activeItem?: string;
   main?: React.ReactNode;
 }) {
   return (
@@ -55,18 +58,34 @@ export function Shell({
           </div>
         )}
         <nav className="flex flex-1 flex-col gap-0.5 px-2">
-          {NAV.map((item, i) => (
-            <span
-              key={item}
-              className={
-                i === 0
-                  ? "rounded-md bg-white/10 px-3 py-2 text-sm font-medium text-white"
-                  : "rounded-md px-3 py-2 text-sm text-white/60"
-              }
-            >
-              {item}
-            </span>
-          ))}
+          {NAV.map((item) => {
+            const active = item.label === (activeItem ?? "Overview");
+            if (!item.anchor) {
+              return (
+                <span
+                  key={item.label}
+                  aria-disabled="true"
+                  className="cursor-not-allowed rounded-md px-3 py-2 text-sm text-white/30"
+                  title="Coming soon"
+                >
+                  {item.label}
+                </span>
+              );
+            }
+            return (
+              <a
+                key={item.label}
+                href={`#${item.anchor}`}
+                className={`rounded-md px-3 py-2 text-sm ${
+                  active
+                    ? "bg-white/10 font-medium text-white"
+                    : "text-white/60 hover:bg-white/5 hover:text-white/80"
+                }`}
+              >
+                {item.label}
+              </a>
+            );
+          })}
         </nav>
         <div className="border-t border-white/10 px-5 py-4">
           <div className="truncate text-sm text-white/80">

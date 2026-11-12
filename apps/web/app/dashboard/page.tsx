@@ -79,7 +79,7 @@ export default function DashboardPage() {
       onLogout={logout}
       main={
         <div className="flex flex-col gap-8">
-          <header>
+          <header id="overview" className="scroll-mt-8">
             <h1 className="text-lg font-semibold">Overview</h1>
             <p className="mt-1 text-sm text-[var(--color-ink-muted)]">
               Your organizations

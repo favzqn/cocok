@@ -74,7 +74,10 @@ function AccountsSection({ org }: { org: OrgSummary }) {
   });
 
   return (
-    <section className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)]">
+    <section
+      id="accounts"
+      className="scroll-mt-8 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)]"
+    >
       <div className="border-b border-[var(--color-line)] px-5 py-4 text-sm font-medium">
         Financial Accounts
       </div>
@@ -459,7 +462,10 @@ function TransactionsSection({ org }: { org: OrgSummary }) {
   });
 
   return (
-    <section className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)]">
+    <section
+      id="transactions"
+      className="scroll-mt-8 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)]"
+    >
       <div className="border-b border-[var(--color-line)] px-5 py-4 text-sm font-medium">
         Canonical transactions
       </div>
