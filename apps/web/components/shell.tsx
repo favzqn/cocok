@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import type { OrgSummary, User } from "@/lib/api";
 
 // anchor = section id on the dashboard; null = not built yet (disabled).
@@ -21,7 +22,6 @@ export function Shell({
   activeOrgId,
   onSwitchOrg,
   onLogout,
-  activeItem,
   main,
 }: {
   user?: User;
@@ -29,9 +29,16 @@ export function Shell({
   activeOrgId?: string;
   onSwitchOrg?: (id: string) => void;
   onLogout?: () => void;
-  activeItem?: string;
   main?: React.ReactNode;
 }) {
+  const [hash, setHash] = useState("");
+  useEffect(() => {
+    const sync = () => setHash(window.location.hash);
+    sync();
+    window.addEventListener("hashchange", sync);
+    return () => window.removeEventListener("hashchange", sync);
+  }, []);
+  const activeItem = NAV.find((n) => `#${n.anchor}` === hash)?.label ?? "Overview";
   return (
     <div className="flex min-h-dvh">
       <aside className="flex w-60 shrink-0 flex-col bg-[var(--color-navy-950)] text-white">
