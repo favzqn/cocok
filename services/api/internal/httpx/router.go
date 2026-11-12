@@ -12,6 +12,8 @@ import (
 type Deps struct {
 	Auth      *AuthHandlers
 	Orgs      *OrgHandlers
+	Accounts  *AccountHandlers
+	Imports   *ImportHandlers
 	OrgsSvc   *organizations.Service
 	Log       *slog.Logger
 	WebOrigin string
@@ -71,6 +73,16 @@ func NewRouter(d Deps) http.Handler {
 				r.Get("/members", d.Orgs.Members)
 				r.With(RequirePermission("member:manage")).Post("/invitations", d.Orgs.Invite)
 				r.With(RequirePermission("member:manage")).Patch("/members/role", d.Orgs.ChangeRole)
+
+				// Phase 2: ingestion.
+				r.With(RequirePermission("data:view")).Get("/accounts", d.Accounts.List)
+				r.With(RequirePermission("account:manage")).Post("/accounts", d.Accounts.Create)
+				r.With(RequirePermission("account:manage")).Patch("/accounts/{accountID}", d.Accounts.Update)
+
+				r.With(RequirePermission("data:view")).Get("/imports", d.Imports.List)
+				r.With(RequirePermission("import:run")).Post("/imports", d.Imports.Upload)
+				r.With(RequirePermission("import:run")).Post("/imports/{importID}/commit", d.Imports.Commit)
+				r.With(RequirePermission("data:view")).Get("/transactions", d.Imports.ListTransactions)
 			})
 		})
 	})

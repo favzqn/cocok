@@ -7,6 +7,7 @@ import { api, type OrgSummary, type User } from "@/lib/api";
 import { Shell } from "@/components/shell";
 import { CreateOrgForm, OrgList } from "@/components/orgs";
 import { MembersPanel } from "@/components/members";
+import { IngestPanel } from "@/components/ingest";
 
 const ACTIVE_ORG_KEY = "cocok.activeOrgId";
 
@@ -101,6 +102,7 @@ export default function DashboardPage() {
             }
           />
           {activeOrg && <MembersPanel org={activeOrg} />}
+          {activeOrg && <IngestPanel org={activeOrg} />}
         </div>
       }
     />

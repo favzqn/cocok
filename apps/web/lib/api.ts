@@ -101,3 +101,82 @@ export function roleLabel(role: string): string {
 export function canManage(role: string): boolean {
   return role === "owner" || role === "admin";
 }
+
+// RBAC mirrors (backend enforces; UI only hides affordances).
+export function canManageAccounts(role: string): boolean {
+  return canManage(role);
+}
+
+export function canImport(role: string): boolean {
+  return role !== "viewer";
+}
+
+export type FinancialAccount = {
+  id: string;
+  name: string;
+  kind: string;
+  account_number: string | null;
+  currency: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ImportBatch = {
+  id: string;
+  account_id: string;
+  filename: string;
+  status: string;
+  row_count: number;
+  valid_count: number;
+  invalid_count: number;
+  inserted_count: number;
+  duplicate_count: number;
+  created_at: string;
+  committed_at: string | null;
+};
+
+export type ImportPreview = {
+  batch_id: string;
+  account_id: string;
+  filename: string;
+  headers: string[];
+  mapping: Record<string, string>;
+  row_count: number;
+  valid_count: number;
+  invalid_count: number;
+  errors: { row: number; field?: string; message: string }[];
+  sample: {
+    row: number;
+    date: string;
+    direction: string;
+    amount_minor: number;
+    description?: string;
+    counterparty?: string;
+    external_ref?: string;
+  }[];
+};
+
+export type CanonicalTransaction = {
+  id: string;
+  account_id: string;
+  booked_at: string;
+  direction: string;
+  amount_minor: number;
+  currency: string;
+  description: string;
+  counterparty: string | null;
+  external_ref: string | null;
+  created_at: string;
+};
+
+export function formatMinor(amountMinor: number, currency: string): string {
+  const decimals = currency === "IDR" ? 0 : 2;
+  const major = amountMinor / 10 ** decimals;
+  return new Intl.NumberFormat("id-ID", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(major);
+}

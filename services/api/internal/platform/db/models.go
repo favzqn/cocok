@@ -25,6 +25,38 @@ type AuditLog struct {
 	CreatedAt      time.Time
 }
 
+type FinancialAccount struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Name           string
+	Kind           string
+	AccountNumber  pgtype.Text
+	Currency       string
+	Status         string
+	CreatedBy      *uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+type ImportBatch struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	AccountID      uuid.UUID
+	Filename       string
+	Mapping        []byte
+	RawFile        []byte
+	Status         string
+	RowCount       int32
+	ValidCount     int32
+	InvalidCount   int32
+	InsertedCount  int32
+	DuplicateCount int32
+	CreatedBy      *uuid.UUID
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	CommittedAt    *time.Time
+}
+
 type Invitation struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
@@ -68,6 +100,24 @@ type Session struct {
 	ExpiresAt time.Time
 	RevokedAt *time.Time
 	CreatedAt time.Time
+}
+
+type Transaction struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	AccountID      uuid.UUID
+	ImportBatchID  *uuid.UUID
+	BookedAt       time.Time
+	Direction      string
+	AmountMinor    int64
+	Currency       string
+	Description    string
+	Counterparty   pgtype.Text
+	ExternalRef    pgtype.Text
+	Fingerprint    string
+	SourceRow      int32
+	RawRow         []byte
+	CreatedAt      time.Time
 }
 
 type User struct {

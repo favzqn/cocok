@@ -28,8 +28,27 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done & verified (tests r
 
 **Accept:** ✅ two orgs in DB; cross-org 404 tested; permission matrix enforced (403 test); audit rows verified live.
 
-## Phase 2 — Ingestion (next session)
-Financial accounts → CSV/XLSX import (template mapping, preview, validate, commit) → normalization → canonical transactions → duplicate detection → raw file storage.
+## Phase 2 — Ingestion ✅
+- [x] Migration: `financial_accounts`, `import_batches` (raw CSV stored BYTEA, ≤10MB), `transactions` (canonical, `UNIQUE(account_id, fingerprint)`)
+- [x] sqlc queries + generated code
+- [x] `platform/money.go` — amount string → int64 minor units (IDR=0 dec, USD=2 dec; grouping/decimal auto-detect, no float) + tests
+- [x] Financial accounts CRUD (`account:manage` / `data:view`)
+- [x] CSV import: multipart upload → column mapping (date/amount required, description/counterparty/direction/reference optional) → per-row validate → preview (sample + row errors) → commit in one tx
+- [x] Direction: from mapped column (credit/debit/masuk/keluar/…) else sign of amount; amount stored abs, `amount_minor >= 0`
+- [x] Dates: 8 layouts, parsed in Asia/Jakarta
+- [x] Duplicate detection: sha256 fingerprint (date|direction|amount|norm(desc)|norm(counterparty)|ref), `ON CONFLICT DO NOTHING`; re-import counts as duplicates
+- [x] Audit: `account.created/updated`, `import.uploaded/committed`
+- [x] API tests: happy path, preview-before-commit, double-commit 409, re-import dedup, bad-row preview, cross-tenant 404, viewer 403, finance_staff import OK / account-create 403
+- [x] Frontend: accounts panel, CSV upload + mapping selects + preview + commit, canonical transactions table
+
+**Accept:** ✅ `go vet` + `go test ./...` green (unit + integration vs live Postgres); web typecheck green.
+
+Deferred within Phase 2 (documented):
+- XLSX import — needs `excelize` dependency; CSV covers current scope. Add when a real marketplace/gateway export requires it.
+- RLS (`SET app.current_org`) — all queries already filter `organization_id`; add FORCE RLS in Phase 7 hardening.
+- Object storage for raw files — BYTEA inline fine ≤10MB; move to S3 when files grow.
+- Org timezone override — parse uses Asia/Jakarta (product default) until org settings land.
+
 
 ## Phase 3 — Reconciliation engine
 Candidate generation (indexed, no O(n²)) → normalization → scoring (amount/ref/date/counterparty/description, versioned weights) → conflict resolution → match groups (1:1, 1:N, N:1) → approve/reject/unmatch/manual → audit.

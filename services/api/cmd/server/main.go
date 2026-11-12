@@ -10,10 +10,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/cocok/cocok/services/api/internal/accounts"
 	"github.com/cocok/cocok/services/api/internal/audit"
 	"github.com/cocok/cocok/services/api/internal/auth"
 	"github.com/cocok/cocok/services/api/internal/config"
 	"github.com/cocok/cocok/services/api/internal/httpx"
+	"github.com/cocok/cocok/services/api/internal/imports"
 	"github.com/cocok/cocok/services/api/internal/organizations"
 	"github.com/cocok/cocok/services/api/internal/platform"
 	db "github.com/cocok/cocok/services/api/internal/platform/db"
@@ -52,12 +54,17 @@ func run(log *slog.Logger) error {
 	}
 
 	queries := db.New(pool)
+	auditWriter := audit.NewWriter(queries, log)
 	authSvc := auth.NewService(queries, cfg.SessionTTL)
-	orgSvc := organizations.NewService(queries, pool, audit.OrgAdapter{W: audit.NewWriter(queries, log)})
+	orgSvc := organizations.NewService(queries, pool, audit.OrgAdapter{W: auditWriter})
+	acctSvc := accounts.NewService(queries, pool, auditWriter)
+	impSvc := imports.NewService(queries, pool, auditWriter)
 
 	router := httpx.NewRouter(httpx.Deps{
 		Auth:      httpx.NewAuthHandlers(authSvc, log, cfg.SessionCookie),
 		Orgs:      httpx.NewOrgHandlers(orgSvc, log),
+		Accounts:  httpx.NewAccountHandlers(acctSvc, log),
+		Imports:   httpx.NewImportHandlers(impSvc, log),
 		OrgsSvc:   orgSvc,
 		Log:       log,
 		WebOrigin: cfg.WebOrigin,

@@ -12,9 +12,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/cocok/cocok/services/api/internal/accounts"
 	"github.com/cocok/cocok/services/api/internal/audit"
 	"github.com/cocok/cocok/services/api/internal/auth"
 	"github.com/cocok/cocok/services/api/internal/httpx"
+	"github.com/cocok/cocok/services/api/internal/imports"
 	"github.com/cocok/cocok/services/api/internal/organizations"
 	"github.com/cocok/cocok/services/api/internal/platform"
 	db "github.com/cocok/cocok/services/api/internal/platform/db"
@@ -47,13 +49,18 @@ func newTestServer(t *testing.T) (*httptest.Server, *db.Queries) {
 
 	queries := db.New(pool)
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
+	auditWriter := audit.NewWriter(queries, log)
 	authSvc := auth.NewService(queries, 24*time.Hour)
-	orgSvc := organizations.NewService(queries, pool, audit.OrgAdapter{W: audit.NewWriter(queries, log)})
+	orgSvc := organizations.NewService(queries, pool, audit.OrgAdapter{W: auditWriter})
+	acctSvc := accounts.NewService(queries, pool, auditWriter)
+	impSvc := imports.NewService(queries, pool, auditWriter)
 	srv := httptest.NewServer(httpx.NewRouter(httpx.Deps{
-		Auth:    httpx.NewAuthHandlers(authSvc, log, false),
-		Orgs:    httpx.NewOrgHandlers(orgSvc, log),
-		OrgsSvc: orgSvc,
-		Log:     log,
+		Auth:     httpx.NewAuthHandlers(authSvc, log, false),
+		Orgs:     httpx.NewOrgHandlers(orgSvc, log),
+		Accounts: httpx.NewAccountHandlers(acctSvc, log),
+		Imports:  httpx.NewImportHandlers(impSvc, log),
+		OrgsSvc:  orgSvc,
+		Log:      log,
 	}))
 	t.Cleanup(srv.Close)
 	return srv, queries

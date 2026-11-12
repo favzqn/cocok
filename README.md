@@ -4,7 +4,7 @@
 
 Import financial data from anywhere. Automatically reconcile everything. Investigate only what doesn't match.
 
-> Status: **Phase 0–1 complete** — identity, organizations, RBAC, tenant isolation. See `IMPLEMENTATION_PLAN.md`.
+> Status: **Phase 0–2 complete** — identity, organizations, RBAC, tenant isolation, financial accounts, CSV ingestion with dedup. See `IMPLEMENTATION_PLAN.md`.
 
 ## Stack
 
