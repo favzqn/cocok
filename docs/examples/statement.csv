@@ -1,0 +1,10 @@
+Tanggal,Keterangan,Nominal,Jenis,Ref
+2024-05-01,Transfer masuk Budi Santoso,1.500.000,masuk,TRX-001
+2024-05-01,QRIS Toko Kopi Senja,-45000,keluar,TRX-002
+2024-05-02,Payment invoice INV-2024-018,-250000,keluar,TRX-003
+2024-05-03,Gaji bulanan Maya,-3500000,keluar,TRX-004
+2024-05-04,Transfer masuk Budi Santoso,1.500.000,masuk,TRX-001
+2024-05-05,BCA interest,12345,masuk,TRX-005
+2024-05-06,Marketplace payout Shopee,875000,masuk,PAY-SHOPEE-88
+2024-05-07,not-a-date,1000,masuk,TRX-BAD
+2024-05-08,Payment invoice INV-2024-019,-175000,500,keluar,TRX-006
