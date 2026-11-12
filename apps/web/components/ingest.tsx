@@ -25,6 +25,21 @@ const MAPPING_FIELDS = [
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
+// Best-effort column guess so the common case needs no manual mapping.
+function guessMapping(cols: string[]): Record<string, string> {
+  const find = (...patterns: RegExp[]) =>
+    cols.find((c) => patterns.some((p) => p.test(c.toLowerCase()))) ?? "";
+  return {
+    date: find(/tanggal/, /^date$/, /tgl/, /booking/, /\bdate\b/),
+    amount: find(/nominal/, /amount/, /nilai/, /jumlah/, /\bamt\b/, /debit.*kredit/, /amount/),
+    description: find(/keterangan/, /description/, /deskripsi/, /narrative/, /memo/),
+    counterparty: find(/counterparty/, /nama/, /payer/, /payee/, /merchant/, /partner/),
+    direction: find(/^jenis$/, /direction/, /\bcr.?dr\b/, /debit.*credit/, /tipe/),
+    reference: find(/^ref/, /referensi/, /reference/, /trx/, /no.?ref/),
+  };
+}
+
+
 export function IngestPanel({ org }: { org: OrgSummary }) {
   return (
     <div className="flex flex-col gap-8">
@@ -154,6 +169,23 @@ function ImportSection({ org }: { org: OrgSummary }) {
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>();
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Read header client-side so mapping can be chosen before first upload.
+  async function onFileChange(f: File | null) {
+    setFile(f);
+    setPreview(null);
+    setMsg(undefined);
+    if (!f) {
+      setHeaders([]);
+      setMapping({});
+      return;
+    }
+    const text = await f.text();
+    const firstLine = text.split(/\r?\n/, 1)[0] ?? "";
+    const cols = firstLine.split(",").map((s) => s.trim().replace(/^"|"$/g, ""));
+    setHeaders(cols);
+    setMapping(guessMapping(cols));
+  }
+
   const accounts = useQuery({
     queryKey: ["accounts", org.id],
     queryFn: () => api<{ data: FinancialAccount[] }>(`/organizations/${org.id}/accounts`),
@@ -247,13 +279,19 @@ function ImportSection({ org }: { org: OrgSummary }) {
               ref={fileRef}
               type="file"
               accept=".csv,text/csv"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              onChange={(e) => void onFileChange(e.target.files?.[0] ?? null)}
               className="text-sm text-[var(--color-ink)]"
             />
           </label>
           <button
             type="button"
-            disabled={!accountId || !file || upload.isPending}
+            disabled={
+              !accountId ||
+              !file ||
+              !mapping.date ||
+              !mapping.amount ||
+              upload.isPending
+            }
             onClick={() => upload.mutate()}
             className="inline-flex h-9 items-center justify-center rounded-md bg-[var(--color-navy-900)] px-4 text-sm font-medium text-white hover:bg-[var(--color-navy-800)] disabled:opacity-60"
           >
@@ -267,6 +305,31 @@ function ImportSection({ org }: { org: OrgSummary }) {
           >
             {msg.text}
           </p>
+        )}
+
+        {headers.length > 0 && !preview && (
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+            {MAPPING_FIELDS.map((f) => (
+              <label
+                key={f.key}
+                className="flex flex-col gap-1 text-xs text-[var(--color-ink-faint)]"
+              >
+                {f.label}
+                <select
+                  value={mapping[f.key] ?? ""}
+                  onChange={(e) => setMapping((m) => ({ ...m, [f.key]: e.target.value }))}
+                  className="h-9 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2 text-sm text-[var(--color-ink)]"
+                >
+                  <option value="">— none —</option>
+                  {headers.map((h) => (
+                    <option key={h} value={h}>
+                      {h}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ))}
+          </div>
         )}
 
         {preview && (
