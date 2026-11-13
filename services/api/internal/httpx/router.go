@@ -10,17 +10,19 @@ import (
 )
 
 type Deps struct {
-	Auth        *AuthHandlers
-	Orgs        *OrgHandlers
-	Accounts    *AccountHandlers
-	Imports     *ImportHandlers
-	Recon       *ReconHandlers
-	Exceptions  *ExceptionHandlers
-	Settlements *SettlementHandlers
-	Reports     *ReportHandlers
-	OrgsSvc     *organizations.Service
-	Log         *slog.Logger
-	WebOrigin   string
+	Auth         *AuthHandlers
+	Orgs         *OrgHandlers
+	Accounts     *AccountHandlers
+	Imports      *ImportHandlers
+	Recon        *ReconHandlers
+	Exceptions   *ExceptionHandlers
+	Settlements  *SettlementHandlers
+	Reports      *ReportHandlers
+	Integrations *IntegrationHandlers
+	Webhooks     *WebhookHandlers
+	OrgsSvc      *organizations.Service
+	Log          *slog.Logger
+	WebOrigin    string
 }
 
 // CORS allows the web app origin to send credentialed requests.
@@ -118,8 +120,18 @@ func NewRouter(d Deps) http.Handler {
 					r.With(RequirePermission("data:view")).Get("/summary", d.Reports.Summary)
 					r.With(RequirePermission("report:export")).Get("/export", d.Reports.Export)
 				})
+
+				// Phase 6: provider integrations.
+				r.Route("/integrations", func(r chi.Router) {
+					r.With(RequirePermission("data:view")).Get("/", d.Integrations.List)
+					r.With(RequirePermission("integration:manage")).Post("/", d.Integrations.Create)
+					r.With(RequirePermission("integration:manage")).Delete("/{integrationID}", d.Integrations.Disable)
+				})
 			})
 		})
+
+		// Provider webhooks: public — signature verification is the auth.
+		r.Post("/webhooks/{provider}/{integrationID}", d.Webhooks.Receive)
 	})
 
 	return r

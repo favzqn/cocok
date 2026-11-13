@@ -25,6 +25,25 @@ type AuditLog struct {
 	CreatedAt      time.Time
 }
 
+type AuthToken struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Kind      string
+	TokenHash string
+	ExpiresAt time.Time
+	UsedAt    *time.Time
+	CreatedAt time.Time
+}
+
+type EmailOutbox struct {
+	ID        uuid.UUID
+	ToEmail   string
+	Subject   string
+	Body      string
+	Kind      string
+	CreatedAt time.Time
+}
+
 type Exception struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
@@ -70,6 +89,19 @@ type ImportBatch struct {
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 	CommittedAt    *time.Time
+}
+
+type Integration struct {
+	ID               uuid.UUID
+	OrganizationID   uuid.UUID
+	Provider         string
+	Mode             string
+	WebhookSecret    string
+	DefaultAccountID *uuid.UUID
+	Status           string
+	CreatedBy        *uuid.UUID
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
 }
 
 type Invitation struct {
@@ -203,4 +235,18 @@ type User struct {
 	Status          string
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
+}
+
+type WebhookEvent struct {
+	ID             uuid.UUID
+	IntegrationID  uuid.UUID
+	OrganizationID uuid.UUID
+	Provider       string
+	EventKey       string
+	EventType      string
+	Payload        []byte
+	Status         string
+	Reason         pgtype.Text
+	TransactionID  *uuid.UUID
+	CreatedAt      time.Time
 }

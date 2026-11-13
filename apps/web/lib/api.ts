@@ -233,6 +233,21 @@ export const REPORT_KINDS = [
 ] as const;
 
 
+// integration:manage = owner/admin only (mirrors backend RBAC).
+export function canManageIntegrations(role: string): boolean {
+  return canManage(role);
+}
+
+export type Integration = {
+  id: string;
+  provider: string;
+  mode: string;
+  default_account_id?: string;
+  status: string;
+  webhook_url: string;
+  created_at: string;
+};
+
 export type Exception = {
   id: string;
   type: string;

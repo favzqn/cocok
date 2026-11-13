@@ -17,12 +17,15 @@ import (
 	"github.com/cocok/cocok/services/api/internal/exceptions"
 	"github.com/cocok/cocok/services/api/internal/httpx"
 	"github.com/cocok/cocok/services/api/internal/imports"
+	"github.com/cocok/cocok/services/api/internal/integrations"
+	"github.com/cocok/cocok/services/api/internal/notifications"
 	"github.com/cocok/cocok/services/api/internal/organizations"
 	"github.com/cocok/cocok/services/api/internal/platform"
 	db "github.com/cocok/cocok/services/api/internal/platform/db"
 	"github.com/cocok/cocok/services/api/internal/reconciliation"
 	"github.com/cocok/cocok/services/api/internal/reports"
 	"github.com/cocok/cocok/services/api/internal/settlements"
+	"github.com/cocok/cocok/services/api/internal/webhooks"
 	"github.com/cocok/cocok/services/api/migrations"
 )
 
@@ -59,7 +62,7 @@ func run(log *slog.Logger) error {
 
 	queries := db.New(pool)
 	auditWriter := audit.NewWriter(queries, log)
-	authSvc := auth.NewService(queries, cfg.SessionTTL)
+	authSvc := auth.NewService(queries, cfg.SessionTTL, notifications.NewOutboxMailer(queries, log), cfg.WebOrigin)
 	orgSvc := organizations.NewService(queries, pool, audit.OrgAdapter{W: auditWriter})
 	acctSvc := accounts.NewService(queries, pool, auditWriter)
 	impSvc := imports.NewService(queries, pool, auditWriter)
@@ -67,19 +70,23 @@ func run(log *slog.Logger) error {
 	reconSvc := reconciliation.NewService(queries, pool, auditWriter, excSvc)
 	setlSvc := settlements.NewService(queries, pool, auditWriter)
 	repSvc := reports.NewService(queries)
+	intgSvc := integrations.NewService(queries, pool, auditWriter, cfg.WebOrigin)
+	whkSvc := webhooks.NewService(queries, pool, auditWriter)
 
 	router := httpx.NewRouter(httpx.Deps{
-		Auth:        httpx.NewAuthHandlers(authSvc, log, cfg.SessionCookie),
-		Orgs:        httpx.NewOrgHandlers(orgSvc, log),
-		Accounts:    httpx.NewAccountHandlers(acctSvc, log),
-		Imports:     httpx.NewImportHandlers(impSvc, log),
-		Recon:       httpx.NewReconHandlers(reconSvc, log),
-		Exceptions:  httpx.NewExceptionHandlers(excSvc, log),
-		Settlements: httpx.NewSettlementHandlers(setlSvc, log),
-		Reports:     httpx.NewReportHandlers(repSvc, log),
-		OrgsSvc:     orgSvc,
-		Log:         log,
-		WebOrigin:   cfg.WebOrigin,
+		Auth:         httpx.NewAuthHandlers(authSvc, log, cfg.SessionCookie),
+		Orgs:         httpx.NewOrgHandlers(orgSvc, log),
+		Accounts:     httpx.NewAccountHandlers(acctSvc, log),
+		Imports:      httpx.NewImportHandlers(impSvc, log),
+		Recon:        httpx.NewReconHandlers(reconSvc, log),
+		Exceptions:   httpx.NewExceptionHandlers(excSvc, log),
+		Settlements:  httpx.NewSettlementHandlers(setlSvc, log),
+		Reports:      httpx.NewReportHandlers(repSvc, log),
+		Integrations: httpx.NewIntegrationHandlers(intgSvc, log),
+		Webhooks:     httpx.NewWebhookHandlers(whkSvc, log),
+		OrgsSvc:      orgSvc,
+		Log:          log,
+		WebOrigin:    cfg.WebOrigin,
 	})
 
 	srv := &http.Server{

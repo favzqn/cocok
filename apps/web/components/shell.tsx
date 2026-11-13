@@ -11,7 +11,7 @@ export const NAV: { label: string; anchor: string | null }[] = [
   { label: "Exceptions", anchor: "exceptions" },
   { label: "Settlements", anchor: "settlements" },
   { label: "Financial Accounts", anchor: "accounts" },
-  { label: "Integrations", anchor: null },
+  { label: "Integrations", anchor: "integrations" },
   { label: "Reports", anchor: "reports" },
   { label: "Audit Logs", anchor: null },
   { label: "Settings", anchor: null },

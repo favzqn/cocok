@@ -101,7 +101,23 @@ Deferred within Phase 5 (documented):
 - PDF/Excel export — CSV covers operator needs; add when clients demand.
 - Charts (Recharts in stack) — tables first; sparklines when history accumulates.
 
-## Phase 6 — Provider integrations (Xendit/Midtrans sandbox, webhooks, sig verify, dedup)
+## Phase 6 — Provider integrations & notifications ✅
+- [x] Migration: `integrations` (xendit/midtrans, mode `sandbox`, webhook_secret, default_account; unique active per provider+org), `webhook_events` (UNIQUE provider+event_key = dedup), `auth_tokens` (verify_email/reset_password, single-use, hashed), `email_outbox` (sandbox mailer)
+- [x] `internal/connectors` — adapter interface; **Xendit**: `x-callback-token` constant-time compare; **Midtrans**: hex(sha512(order_id+status_code+gross_amount+server_key)) in `x-signature`; event parse → normalized PaymentEvent (json.Number — no float)
+- [x] Webhooks: public `POST /api/v1/webhooks/{provider}/{integrationID}` (signature IS auth) → verify → dedup → mint credit transaction (amount via platform.ParseAmount, fingerprint double-guard) → event row processed/ignored/failed → audit; 401 bad sig, 404 unknown integration, 200 duplicate (stops provider retries)
+- [x] Integrations CRUD (`data:view` / `integration:manage`), webhook URL returned for provider dashboard paste
+- [x] Notifications: `auth.Mailer` interface + `notifications.OutboxMailer` (row + log, SMTP lands Phase 7); register sends verification email; `POST /auth/verify-email`, `/auth/forgot-password` (always 200, no enumeration), `/auth/reset-password` (revokes ALL sessions) — auth route rate-limit applies
+- [x] API tests: Xendit full flow (401 → processed → tx minted → duplicate no-op → 404), Midtrans sig valid/invalid, integration dup 409, viewer 403, cross-tenant 404; verify single-use, reset (weak 400, old pass dead, sessions revoked, token single-use), forgot unknown-email 200
+- [x] Frontend: Integrations panel (copy webhook URL, connect form, disable per RBAC), `/forgot-password`, `/reset-password`, `/verify-email` pages, login link; nav enabled
+
+**Accept:** ✅ `go vet` + `go test ./...` green; web typecheck green.
+
+Deferred within Phase 6 (documented):
+- Outbound APIs (create invoice/charge) — inbound-only adapters until a flow needs them.
+- Live mode: `mode` column exists but always written `sandbox` until credentials (PRODUCT.md §Assumptions).
+- Email provider (SMTP/SES) behind the same Mailer interface — Phase 7.
+- Webhook retry/backoff UI — event table stores status for ops inspection.
+
 ## Phase 7 — Production hardening (security review, k6, observability, deploy)
 
 ---

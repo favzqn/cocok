@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/cocok/cocok/services/api/internal/auth"
@@ -157,4 +158,60 @@ func (h *AuthHandlers) Routes(r chi.Router) {
 	r.Post("/logout", h.Logout)
 	r.Post("/refresh", h.Refresh)
 	r.Get("/me", h.Me)
+	r.Post("/verify-email", h.VerifyEmail)
+	r.Post("/forgot-password", h.ForgotPassword)
+	r.Post("/reset-password", h.ResetPassword)
+}
+
+func (h *AuthHandlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Token string `json:"token"`
+	}
+	if err := Decode(r, &in); err != nil || strings.TrimSpace(in.Token) == "" {
+		BadRequest(w, r, "token is required", nil)
+		return
+	}
+	if err := h.svc.VerifyEmail(r.Context(), in.Token); err != nil {
+		Err(w, r, http.StatusBadRequest, "validation_failed", "invalid or expired token", nil)
+		return
+	}
+	JSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// ForgotPassword always returns 200 (no user enumeration).
+func (h *AuthHandlers) ForgotPassword(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Email string `json:"email"`
+	}
+	if err := Decode(r, &in); err != nil || strings.TrimSpace(in.Email) == "" {
+		BadRequest(w, r, "email is required", nil)
+		return
+	}
+	if err := h.svc.ForgotPassword(r.Context(), in.Email); err != nil {
+		h.log.Error("forgot password failed", "error", err)
+	}
+	JSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+func (h *AuthHandlers) ResetPassword(w http.ResponseWriter, r *http.Request) {
+	var in struct {
+		Token    string `json:"token"`
+		Password string `json:"password"`
+	}
+	if err := Decode(r, &in); err != nil || strings.TrimSpace(in.Token) == "" {
+		BadRequest(w, r, "token is required", nil)
+		return
+	}
+	if err := h.svc.ResetPassword(r.Context(), in.Token, in.Password); err != nil {
+		switch {
+		case errors.Is(err, auth.ErrInvalidToken):
+			Err(w, r, http.StatusBadRequest, "validation_failed", "invalid or expired token", nil)
+		case errors.Is(err, platform.ErrValidation):
+			BadRequest(w, r, stripValidationPrefix(err), nil)
+		default:
+			Internal(w, r, h.log, err)
+		}
+		return
+	}
+	JSON(w, http.StatusOK, map[string]bool{"ok": true})
 }

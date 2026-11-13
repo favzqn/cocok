@@ -107,6 +107,12 @@ export default function LoginPage() {
           >
             {isSubmitting ? "Signing in…" : "Sign in"}
           </button>
+          <a
+            href="/forgot-password"
+            className="text-right text-xs text-[var(--color-ink-muted)] underline underline-offset-2"
+          >
+            Forgot password?
+          </a>
         </form>
 
         <p className="mt-6 text-sm text-[var(--color-ink-muted)]">

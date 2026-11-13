@@ -23,15 +23,18 @@ var (
 	ErrEmailTaken         = errors.New("email already registered")
 	ErrDisabled           = errors.New("account disabled")
 	ErrInvalidSession     = errors.New("invalid session")
+	ErrInvalidToken       = errors.New("invalid or expired token")
 )
 
 type Service struct {
-	queries *db.Queries
-	ttl     time.Duration
+	queries   *db.Queries
+	ttl       time.Duration
+	mailer    Mailer
+	webOrigin string
 }
 
-func NewService(q *db.Queries, ttl time.Duration) *Service {
-	return &Service{queries: q, ttl: ttl}
+func NewService(q *db.Queries, ttl time.Duration, m Mailer, webOrigin string) *Service {
+	return &Service{queries: q, ttl: ttl, mailer: m, webOrigin: strings.TrimRight(webOrigin, "/")}
 }
 
 type RegisterInput struct {
@@ -66,6 +69,7 @@ func (s *Service) Register(ctx context.Context, in RegisterInput) (*db.User, err
 		}
 		return nil, err
 	}
+	s.SendVerification(ctx, &u)
 	return &u, nil
 }
 
