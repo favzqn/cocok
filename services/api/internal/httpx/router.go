@@ -1,12 +1,15 @@
 package httpx
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/cocok/cocok/services/api/internal/organizations"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Deps struct {
@@ -21,11 +24,26 @@ type Deps struct {
 	Integrations *IntegrationHandlers
 	Webhooks     *WebhookHandlers
 	OrgsSvc      *organizations.Service
+	DB           *pgxpool.Pool
 	Log          *slog.Logger
 	WebOrigin    string
 }
 
-// CORS allows the web app origin to send credentialed requests.
+// SecurityHeaders sets conservative browser hardening headers. CSP is
+// intentionally omitted until Next.js nonce wiring exists (documented in
+// docs/security-review.md); HSTS is ignored by browsers on plain HTTP.
+func SecurityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		h := w.Header()
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		h.Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+		h.Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		next.ServeHTTP(w, r)
+	})
+}
+
 func CORS(origin string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -47,16 +65,29 @@ func CORS(origin string) func(http.Handler) http.Handler {
 
 func NewRouter(d Deps) http.Handler {
 	r := chi.NewRouter()
+	metrics := newMetrics()
 	r.Use(middleware.Recoverer)
 	r.Use(WithRequestID)
+	r.Use(SecurityHeaders)
 	r.Use(middleware.RealIP)
+	r.Use(metrics.Middleware)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Compress(5))
 	r.Use(CORS(d.WebOrigin))
 
-	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
+	// Liveness + DB readiness in one probe.
+	r.Get("/healthz", func(w http.ResponseWriter, req *http.Request) {
+		if d.DB != nil {
+			ctx, cancel := context.WithTimeout(req.Context(), 2*time.Second)
+			defer cancel()
+			if err := d.DB.Ping(ctx); err != nil {
+				Err(w, req, http.StatusServiceUnavailable, "internal", "database unavailable", nil)
+				return
+			}
+		}
 		JSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
+	r.Get("/metrics", metrics.Handler)
 
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/auth", d.Auth.Routes)
@@ -131,7 +162,7 @@ func NewRouter(d Deps) http.Handler {
 		})
 
 		// Provider webhooks: public — signature verification is the auth.
-		r.Post("/webhooks/{provider}/{integrationID}", d.Webhooks.Receive)
+		r.With(RateLimit(2, 20)).Post("/webhooks/{provider}/{integrationID}", d.Webhooks.Receive)
 	})
 
 	return r

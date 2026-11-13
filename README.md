@@ -4,7 +4,7 @@
 
 Import financial data from anywhere. Automatically reconcile everything. Investigate only what doesn't match.
 
-> Status: **Phase 0–6 complete** — identity + auth recovery, RBAC, multi-tenancy, CSV ingestion, reconciliation, exceptions, settlements, analytics, provider webhooks (Xendit/Midtrans sandbox) with signature verify + dedup, sandbox email outbox. See `IMPLEMENTATION_PLAN.md`.
+> Status: **Phase 0–7 complete (MVP)** — full ingestion→reconciliation→exceptions→settlements→reports pipeline, provider webhooks, auth recovery, load-tested + hardened. See `IMPLEMENTATION_PLAN.md`, `docs/deploy.md`, `docs/security-review.md`.
 
 ## Stack
 

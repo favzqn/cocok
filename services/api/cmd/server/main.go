@@ -87,6 +87,7 @@ func run(log *slog.Logger) error {
 		OrgsSvc:      orgSvc,
 		Log:          log,
 		WebOrigin:    cfg.WebOrigin,
+		DB:           pool,
 	})
 
 	srv := &http.Server{

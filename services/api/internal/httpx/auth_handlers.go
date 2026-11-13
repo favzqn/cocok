@@ -152,7 +152,9 @@ func userJSON(u *db.User) map[string]any {
 
 // Routes mounts auth endpoints under a chi router.
 func (h *AuthHandlers) Routes(r chi.Router) {
-	r.Use(RateLimit(0.5, 10)) // 0.5 rps, burst 10 per IP
+	rps := authRateRPS()
+	burst := int(rps*2) + 10
+	r.Use(RateLimit(rps, burst))
 	r.Post("/register", h.Register)
 	r.Post("/login", h.Login)
 	r.Post("/logout", h.Logout)

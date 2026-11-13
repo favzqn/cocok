@@ -118,7 +118,22 @@ Deferred within Phase 6 (documented):
 - Email provider (SMTP/SES) behind the same Mailer interface — Phase 7.
 - Webhook retry/backoff UI — event table stores status for ops inspection.
 
-## Phase 7 — Production hardening (security review, k6, observability, deploy)
+## Phase 7 — Production hardening ✅
+- [x] Migration `00007`: `audit_logs` append-only **enforced by DB trigger** (UPDATE/DELETE raise) + test proving it
+- [x] Security headers middleware (nosniff, X-Frame-Options DENY, referrer-policy, permissions-policy, HSTS); CSP documented as deferred (Next nonce work)
+- [x] `/healthz` pings DB → 503 when down; `/metrics` Prometheus-text counters (hand-rolled, zero deps)
+- [x] Auth rate limit configurable (`AUTH_RATE_RPS`, default 0.5 rps); webhook route rate-limited 2 rps
+- [x] **k6**: `loadtest/k6.js` smoke (5 VU × 15s, session cookie exported from setup — k6 VU-jar gotcha) — **0% errors, p95 10.5ms, 2042 reqs** vs local API
+- [x] Docker: `services/api/Dockerfile` (static build), `apps/web/Dockerfile`, `docker-compose.prod.yml` (db+api+web, healthcheck-gated migrations)
+- [x] Docs: `docs/deploy.md` (env table, pre-traffic checklist, ops), `docs/security-review.md` (applied items, verified carry-overs, accepted risks + upgrade paths)
+- [x] Live-server incident fixed: stale `go run` child kept port 8081 across restarts (pkill patterns missed go-build cache path) — verified fresh binary via summary/integrations/metrics probes
+
+**Accept:** ✅ `go vet` + `go test ./...` green; k6 thresholds green; security headers + metrics + append-only trigger tested.
+
+Known deferral (full rationale in `docs/security-review.md`): Postgres RLS —
+application-layer tenancy enforced + tested; upgrade path = per-request
+`SET LOCAL` tx wrapper alongside non-superuser DB role rollout.
+
 
 ---
 

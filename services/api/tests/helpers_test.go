@@ -80,6 +80,7 @@ func newTestServer(t *testing.T) (*httptest.Server, *db.Queries) {
 		Webhooks:     httpx.NewWebhookHandlers(whkSvc, log),
 		OrgsSvc:      orgSvc,
 		Log:          log,
+		DB:           pool,
 	}))
 	t.Cleanup(srv.Close)
 	return srv, queries
