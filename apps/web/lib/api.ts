@@ -198,6 +198,41 @@ export function canResolveExceptions(role: string): boolean {
   return role !== "viewer";
 }
 
+export type ReportSummary = {
+  transactions: { total_count: number; total_credit_minor: number; total_debit_minor: number };
+  matched: {
+    count: number;
+    credit_count: number;
+    debit_count: number;
+    credit_minor: number;
+    debit_minor: number;
+    match_rate: number;
+  };
+  groups_by_status: Record<string, number>;
+  exceptions_by_status: Record<string, number>;
+  settlements_by_status: Record<
+    string,
+    { count: number; expected_minor: number; settled_minor: number }
+  >;
+  accounts: {
+    id: string;
+    name: string;
+    currency: string;
+    tx_count: number;
+    credit_minor: number;
+    debit_minor: number;
+    matched_count: number;
+  }[];
+};
+
+export const REPORT_KINDS = [
+  { kind: "transactions", label: "Transactions" },
+  { kind: "matches", label: "Match groups" },
+  { kind: "exceptions", label: "Exceptions" },
+  { kind: "settlements", label: "Settlements" },
+] as const;
+
+
 export type Exception = {
   id: string;
   type: string;

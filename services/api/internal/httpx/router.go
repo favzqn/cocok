@@ -17,6 +17,7 @@ type Deps struct {
 	Recon       *ReconHandlers
 	Exceptions  *ExceptionHandlers
 	Settlements *SettlementHandlers
+	Reports     *ReportHandlers
 	OrgsSvc     *organizations.Service
 	Log         *slog.Logger
 	WebOrigin   string
@@ -110,6 +111,12 @@ func NewRouter(d Deps) http.Handler {
 					r.With(RequirePermission("reconcile:run")).Post("/", d.Settlements.Create)
 					r.With(RequirePermission("reconcile:run")).Patch("/{settlementID}", d.Settlements.Update)
 					r.With(RequirePermission("reconcile:run")).Delete("/{settlementID}", d.Settlements.Delete)
+				})
+
+				// Phase 5: analytics & reporting.
+				r.Route("/reports", func(r chi.Router) {
+					r.With(RequirePermission("data:view")).Get("/summary", d.Reports.Summary)
+					r.With(RequirePermission("report:export")).Get("/export", d.Reports.Export)
 				})
 			})
 		})

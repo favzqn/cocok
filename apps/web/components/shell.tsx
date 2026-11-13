@@ -12,7 +12,7 @@ export const NAV: { label: string; anchor: string | null }[] = [
   { label: "Settlements", anchor: "settlements" },
   { label: "Financial Accounts", anchor: "accounts" },
   { label: "Integrations", anchor: null },
-  { label: "Reports", anchor: null },
+  { label: "Reports", anchor: "reports" },
   { label: "Audit Logs", anchor: null },
   { label: "Settings", anchor: null },
 ];

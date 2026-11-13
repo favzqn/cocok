@@ -88,7 +88,19 @@ Deferred within Phase 4 (documented):
 - Auto-settle picks single closest pending settlement; partial/multi-group settlement splitting deferred.
 - Rejected-run exception purging/retention → Phase 7.
 
-## Phase 5 — Analytics & Reporting
+## Phase 5 — Analytics & Reporting ✅
+- [x] Summary endpoint (`GET /reports/summary`, `data:view`): tx by direction, matched via approved groups + match rate, groups/exceptions/settlements by status, per-account rollup (count, credit/debit totals, matched count)
+- [x] CSV export (`GET /reports/export?kind=`, `report:export`): transactions (with matched flag), matches (group members), exceptions, settlements — stdlib `encoding/csv`, timestamped filename attachment
+- [x] API test: summary numbers vs seeded data (3 tx / 2 matched / rate ~0.667 / 1 open exception), CSV header + matched column verified, bad kind 400, cross-tenant 404
+- [x] Frontend: Reports panel — stat cards (tx, match rate, matched, open exceptions), value flows, per-account table, 4 CSV download buttons; sidebar nav enabled
+
+**Accept:** ✅ `go vet` + `go test ./...` green; web typecheck green.
+
+Deferred within Phase 5 (documented):
+- Date-range filters on summary/export (whole-org only until period reporting lands).
+- PDF/Excel export — CSV covers operator needs; add when clients demand.
+- Charts (Recharts in stack) — tables first; sparklines when history accumulates.
+
 ## Phase 6 — Provider integrations (Xendit/Midtrans sandbox, webhooks, sig verify, dedup)
 ## Phase 7 — Production hardening (security review, k6, observability, deploy)
 

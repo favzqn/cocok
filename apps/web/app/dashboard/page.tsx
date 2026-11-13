@@ -11,6 +11,7 @@ import { IngestPanel } from "@/components/ingest";
 import { ReconPanel } from "@/components/recon";
 import { ExceptionsPanel } from "@/components/exceptions";
 import { SettlementsPanel } from "@/components/settlements";
+import { ReportsPanel } from "@/components/reports";
 
 const ACTIVE_ORG_KEY = "cocok.activeOrgId";
 
@@ -109,6 +110,7 @@ export default function DashboardPage() {
           {activeOrg && <ReconPanel org={activeOrg} />}
           {activeOrg && <ExceptionsPanel org={activeOrg} />}
           {activeOrg && <SettlementsPanel org={activeOrg} />}
+          {activeOrg && <ReportsPanel org={activeOrg} />}
         </div>
       }
     />

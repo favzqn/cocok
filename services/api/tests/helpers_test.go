@@ -22,6 +22,7 @@ import (
 	"github.com/cocok/cocok/services/api/internal/platform"
 	db "github.com/cocok/cocok/services/api/internal/platform/db"
 	"github.com/cocok/cocok/services/api/internal/reconciliation"
+	"github.com/cocok/cocok/services/api/internal/reports"
 	"github.com/cocok/cocok/services/api/internal/settlements"
 	"github.com/cocok/cocok/services/api/migrations"
 )
@@ -60,6 +61,7 @@ func newTestServer(t *testing.T) (*httptest.Server, *db.Queries) {
 	excSvc := exceptions.NewService(queries, pool, auditWriter)
 	reconSvc := reconciliation.NewService(queries, pool, auditWriter, excSvc)
 	setlSvc := settlements.NewService(queries, pool, auditWriter)
+	repSvc := reports.NewService(queries)
 	srv := httptest.NewServer(httpx.NewRouter(httpx.Deps{
 		Auth:        httpx.NewAuthHandlers(authSvc, log, false),
 		Orgs:        httpx.NewOrgHandlers(orgSvc, log),
@@ -68,6 +70,7 @@ func newTestServer(t *testing.T) (*httptest.Server, *db.Queries) {
 		Recon:       httpx.NewReconHandlers(reconSvc, log),
 		Exceptions:  httpx.NewExceptionHandlers(excSvc, log),
 		Settlements: httpx.NewSettlementHandlers(setlSvc, log),
+		Reports:     httpx.NewReportHandlers(repSvc, log),
 		OrgsSvc:     orgSvc,
 		Log:         log,
 	}))
