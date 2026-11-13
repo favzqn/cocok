@@ -10,6 +10,7 @@ import (
 	"github.com/cocok/cocok/services/api/internal/matching"
 	"github.com/cocok/cocok/services/api/internal/platform"
 	db "github.com/cocok/cocok/services/api/internal/platform/db"
+	"github.com/cocok/cocok/services/api/internal/settlements"
 	"github.com/google/uuid"
 )
 
@@ -141,6 +142,15 @@ func (s *Service) Decide(ctx context.Context, orgID, actorID, groupID uuid.UUID,
 	}); err != nil {
 		return err
 	}
+	var settled *db.Settlement
+	if approve {
+		// Auto-settle a pending settlement inside the same tx.
+		s2, err := settlements.TryAutoSettle(ctx, qtx, orgID, groupID)
+		if err != nil {
+			return err
+		}
+		settled = s2
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return err
 	}
@@ -154,6 +164,16 @@ func (s *Service) Decide(ctx context.Context, orgID, actorID, groupID uuid.UUID,
 		PreviousState: map[string]any{"status": g.Status},
 		NewState:      map[string]any{"status": want},
 	})
+	if settled != nil {
+		sid := settled.ID
+		s.audit.Write(ctx, audit.Event{
+			OrganizationID: &orgID, ActorID: actorID,
+			Action: "settlement.settled", EntityType: "settlement", EntityID: &sid,
+			NewState: map[string]any{
+				"amount": settled.ExpectedAmountMinor, "linked_group_id": groupID.String(),
+			},
+		})
+	}
 	return nil
 }
 

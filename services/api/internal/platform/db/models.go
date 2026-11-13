@@ -25,6 +25,21 @@ type AuditLog struct {
 	CreatedAt      time.Time
 }
 
+type Exception struct {
+	ID             uuid.UUID
+	OrganizationID uuid.UUID
+	Type           string
+	Status         string
+	SubjectTxIds   []uuid.UUID
+	Fingerprint    string
+	Detail         []byte
+	Note           pgtype.Text
+	DetectedAt     time.Time
+	ResolvedAt     *time.Time
+	CreatedBy      *uuid.UUID
+	ResolvedBy     *uuid.UUID
+}
+
 type FinancialAccount struct {
 	ID             uuid.UUID
 	OrganizationID uuid.UUID
@@ -140,6 +155,25 @@ type Session struct {
 	ExpiresAt time.Time
 	RevokedAt *time.Time
 	CreatedAt time.Time
+}
+
+type Settlement struct {
+	ID                  uuid.UUID
+	OrganizationID      uuid.UUID
+	AccountID           *uuid.UUID
+	Counterparty        pgtype.Text
+	Reference           pgtype.Text
+	ExpectedAmountMinor int64
+	Currency            string
+	ExpectedDate        time.Time
+	Status              string
+	SettledAmountMinor  int64
+	SettledAt           *time.Time
+	Notes               pgtype.Text
+	LinkedGroupID       *uuid.UUID
+	CreatedBy           *uuid.UUID
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
 type Transaction struct {

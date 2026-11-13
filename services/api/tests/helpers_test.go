@@ -15,12 +15,14 @@ import (
 	"github.com/cocok/cocok/services/api/internal/accounts"
 	"github.com/cocok/cocok/services/api/internal/audit"
 	"github.com/cocok/cocok/services/api/internal/auth"
+	"github.com/cocok/cocok/services/api/internal/exceptions"
 	"github.com/cocok/cocok/services/api/internal/httpx"
 	"github.com/cocok/cocok/services/api/internal/imports"
 	"github.com/cocok/cocok/services/api/internal/organizations"
 	"github.com/cocok/cocok/services/api/internal/platform"
 	db "github.com/cocok/cocok/services/api/internal/platform/db"
 	"github.com/cocok/cocok/services/api/internal/reconciliation"
+	"github.com/cocok/cocok/services/api/internal/settlements"
 	"github.com/cocok/cocok/services/api/migrations"
 )
 
@@ -55,15 +57,19 @@ func newTestServer(t *testing.T) (*httptest.Server, *db.Queries) {
 	orgSvc := organizations.NewService(queries, pool, audit.OrgAdapter{W: auditWriter})
 	acctSvc := accounts.NewService(queries, pool, auditWriter)
 	impSvc := imports.NewService(queries, pool, auditWriter)
-	reconSvc := reconciliation.NewService(queries, pool, auditWriter)
+	excSvc := exceptions.NewService(queries, pool, auditWriter)
+	reconSvc := reconciliation.NewService(queries, pool, auditWriter, excSvc)
+	setlSvc := settlements.NewService(queries, pool, auditWriter)
 	srv := httptest.NewServer(httpx.NewRouter(httpx.Deps{
-		Auth:     httpx.NewAuthHandlers(authSvc, log, false),
-		Orgs:     httpx.NewOrgHandlers(orgSvc, log),
-		Accounts: httpx.NewAccountHandlers(acctSvc, log),
-		Imports:  httpx.NewImportHandlers(impSvc, log),
-		Recon:    httpx.NewReconHandlers(reconSvc, log),
-		OrgsSvc:  orgSvc,
-		Log:      log,
+		Auth:        httpx.NewAuthHandlers(authSvc, log, false),
+		Orgs:        httpx.NewOrgHandlers(orgSvc, log),
+		Accounts:    httpx.NewAccountHandlers(acctSvc, log),
+		Imports:     httpx.NewImportHandlers(impSvc, log),
+		Recon:       httpx.NewReconHandlers(reconSvc, log),
+		Exceptions:  httpx.NewExceptionHandlers(excSvc, log),
+		Settlements: httpx.NewSettlementHandlers(setlSvc, log),
+		OrgsSvc:     orgSvc,
+		Log:         log,
 	}))
 	t.Cleanup(srv.Close)
 	return srv, queries

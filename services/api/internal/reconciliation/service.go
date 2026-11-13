@@ -7,6 +7,7 @@ import (
 	"sort"
 
 	"github.com/cocok/cocok/services/api/internal/audit"
+	"github.com/cocok/cocok/services/api/internal/exceptions"
 	"github.com/cocok/cocok/services/api/internal/matching"
 	db "github.com/cocok/cocok/services/api/internal/platform/db"
 	"github.com/google/uuid"
@@ -28,13 +29,14 @@ var (
 )
 
 type Service struct {
-	queries *db.Queries
-	pool    *pgxpool.Pool
-	audit   *audit.Writer
+	queries    *db.Queries
+	pool       *pgxpool.Pool
+	audit      *audit.Writer
+	exceptions *exceptions.Service
 }
 
-func NewService(q *db.Queries, pool *pgxpool.Pool, a *audit.Writer) *Service {
-	return &Service{queries: q, pool: pool, audit: a}
+func NewService(q *db.Queries, pool *pgxpool.Pool, a *audit.Writer, excs *exceptions.Service) *Service {
+	return &Service{queries: q, pool: pool, audit: a, exceptions: excs}
 }
 
 type RunResult struct {
@@ -118,17 +120,24 @@ func (s *Service) Run(ctx context.Context, orgID, actorID uuid.UUID) (*RunResult
 	// N-ary: subsets of one side whose exact sum equals a counterparty tx.
 	genNary(byID, w.DateWindowDays, add)
 
-	// Score + filter.
-	all := make([]*candidate, 0, len(cands))
+	// Score + split: accepted (≥ min_score) vs interesting misses.
+	accepted := make([]*candidate, 0, len(cands))
+	var misses []exceptions.Miss
 	for _, c := range cands {
 		res := matching.Score(txsFor(byID, c.debitIDs), txsFor(byID, c.creditIDs), *w)
-		if res.Score < w.MinScore {
-			continue
+		if res.Score >= w.MinScore {
+			c.score = res.Score
+			c.comps = res.Components
+			accepted = append(accepted, c)
+		} else if res.Score >= exceptions.Floor() {
+			misses = append(misses, exceptions.Miss{
+				TxIDs:      append(append([]uuid.UUID{}, c.creditIDs...), c.debitIDs...),
+				Score:      res.Score,
+				Components: res.Components,
+			})
 		}
-		c.score = res.Score
-		c.comps = res.Components
-		all = append(all, c)
 	}
+	all := accepted
 	sort.Slice(all, func(i, j int) bool {
 		if all[i].score != all[j].score {
 			return all[i].score > all[j].score
@@ -156,6 +165,15 @@ func (s *Service) Run(ctx context.Context, orgID, actorID uuid.UUID) (*RunResult
 		}
 		proposed = append(proposed, c)
 	}
+
+	// Leftover = still unmatched after greedy (approved txs not in byID).
+	var leftover []uuid.UUID
+	for id := range byID {
+		if !used[id] {
+			leftover = append(leftover, id)
+		}
+	}
+	sort.Slice(leftover, func(i, j int) bool { return leftover[i].String() < leftover[j].String() })
 
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
@@ -215,6 +233,10 @@ func (s *Service) Run(ctx context.Context, orgID, actorID uuid.UUID) (*RunResult
 		if err := addItems(ctx, qtx, g.ID, c.debitIDs, "debit"); err != nil {
 			return nil, err
 		}
+	}
+	// Rebuild the investigation queue in the same tx.
+	if err := s.exceptions.GenerateInTx(ctx, qtx, orgID, actorID, leftover, misses); err != nil {
+		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err

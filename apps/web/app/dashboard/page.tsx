@@ -9,6 +9,8 @@ import { CreateOrgForm, OrgList } from "@/components/orgs";
 import { MembersPanel } from "@/components/members";
 import { IngestPanel } from "@/components/ingest";
 import { ReconPanel } from "@/components/recon";
+import { ExceptionsPanel } from "@/components/exceptions";
+import { SettlementsPanel } from "@/components/settlements";
 
 const ACTIVE_ORG_KEY = "cocok.activeOrgId";
 
@@ -105,6 +107,8 @@ export default function DashboardPage() {
           {activeOrg && <MembersPanel org={activeOrg} />}
           {activeOrg && <IngestPanel org={activeOrg} />}
           {activeOrg && <ReconPanel org={activeOrg} />}
+          {activeOrg && <ExceptionsPanel org={activeOrg} />}
+          {activeOrg && <SettlementsPanel org={activeOrg} />}
         </div>
       }
     />

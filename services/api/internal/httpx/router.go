@@ -10,14 +10,16 @@ import (
 )
 
 type Deps struct {
-	Auth      *AuthHandlers
-	Orgs      *OrgHandlers
-	Accounts  *AccountHandlers
-	Imports   *ImportHandlers
-	Recon     *ReconHandlers
-	OrgsSvc   *organizations.Service
-	Log       *slog.Logger
-	WebOrigin string
+	Auth        *AuthHandlers
+	Orgs        *OrgHandlers
+	Accounts    *AccountHandlers
+	Imports     *ImportHandlers
+	Recon       *ReconHandlers
+	Exceptions  *ExceptionHandlers
+	Settlements *SettlementHandlers
+	OrgsSvc     *organizations.Service
+	Log         *slog.Logger
+	WebOrigin   string
 }
 
 // CORS allows the web app origin to send credentialed requests.
@@ -94,6 +96,20 @@ func NewRouter(d Deps) http.Handler {
 					r.With(RequirePermission("match:approve")).Post("/groups/{groupID}/approve", d.Recon.Approve)
 					r.With(RequirePermission("match:approve")).Post("/groups/{groupID}/reject", d.Recon.Reject)
 					r.With(RequirePermission("match:approve")).Post("/groups/{groupID}/unmatch", d.Recon.Unmatch)
+				})
+
+				// Phase 4: exceptions + settlements.
+				r.Route("/exceptions", func(r chi.Router) {
+					r.With(RequirePermission("data:view")).Get("/", d.Exceptions.List)
+					r.With(RequirePermission("exception:resolve")).Post("/", d.Exceptions.Flag)
+					r.With(RequirePermission("exception:resolve")).Post("/{exceptionID}/resolve", d.Exceptions.Resolve)
+					r.With(RequirePermission("exception:resolve")).Post("/{exceptionID}/dismiss", d.Exceptions.Dismiss)
+				})
+				r.Route("/settlements", func(r chi.Router) {
+					r.With(RequirePermission("data:view")).Get("/", d.Settlements.List)
+					r.With(RequirePermission("reconcile:run")).Post("/", d.Settlements.Create)
+					r.With(RequirePermission("reconcile:run")).Patch("/{settlementID}", d.Settlements.Update)
+					r.With(RequirePermission("reconcile:run")).Delete("/{settlementID}", d.Settlements.Delete)
 				})
 			})
 		})

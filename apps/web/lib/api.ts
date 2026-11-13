@@ -193,6 +193,41 @@ export function canRunRecon(role: string): boolean {
   return role !== "viewer";
 }
 
+// exception:resolve = owner/admin/finance_manager/finance_staff.
+export function canResolveExceptions(role: string): boolean {
+  return role !== "viewer";
+}
+
+export type Exception = {
+  id: string;
+  type: string;
+  status: string;
+  subject_tx_ids: string[];
+  detail?: Record<string, unknown>;
+  note?: string;
+  detected_at: string;
+  resolved_at?: string;
+};
+
+export type Settlement = {
+  id: string;
+  account_id?: string;
+  counterparty?: string;
+  reference?: string;
+  expected_amount_minor: number;
+  currency: string;
+  expected_date: string;
+  status: string;
+  settled_amount_minor: number;
+  settled_at?: string;
+  notes?: string;
+  linked_group_id?: string;
+  created_at: string;
+};
+
+export const SETTLEMENT_STATUSES = ["pending", "partial", "settled", "failed"] as const;
+
+
 export function formatMinor(amountMinor: number, currency: string): string {
   const decimals = currency === "IDR" ? 0 : 2;
   const major = amountMinor / 10 ** decimals;

@@ -71,7 +71,23 @@ Deferred within Phase 3 (documented ceilings):
 - Rejected-group history is kept; purging/retention policy deferred to Phase 7.
 
 
-## Phase 4 — Exceptions & Settlements
+## Phase 4 — Exceptions & Settlements ✅
+- [x] Migration: `exceptions` (type unmatched/near_miss/manual; open/resolved/dismissed; subject tx uuid[]; partial unique on open fp) + `settlements` (expected amount/date, pending/partial/settled/failed, linked_group_id)
+- [x] Exception generation inside Run's tx: every leftover unmatched tx + near-miss candidates (score ∈ [0.3, min_score)); dismissed fingerprints never re-opened; audit `exception.resolved/dismissed`
+- [x] Exceptions API: list (status/type filter), manual flag (409 on dup open), resolve/dismiss with note (`exception:resolve`)
+- [x] Settlements API: CRUD (`reconcile:run`), status transitions manual, settled defaults amount + timestamp; audit created/updated/deleted
+- [x] **Auto-settle**: approve → inside same tx, pending settlement with ±1% amount + ±7d date vs group → status settled + linked_group_id + audit `settlement.settled`
+- [x] API tests: generation (0 when fully matched, orphan → 1, dismissed stays gone), manual flag 409, viewer 403, cross-tenant 404; settlement CRUD, auto-settle on approve (amount + link verified), staff create OK, viewer create 403, cross-tenant 404
+- [x] Frontend: Exceptions panel (status tabs, resolve/dismiss), Settlements panel (create form, status actions, delete), sidebar nav enabled
+
+**Accept:** ✅ `go vet` + `go test ./...` green (unit + integration vs live Postgres); web typecheck green.
+
+Deferred within Phase 4 (documented):
+- Exception notes on resolve/dismiss via UI (API accepts `note`; UI sends empty — prompt() not worth it until bulk actions).
+- Settlement amount units in UI = major units (IDR no decimals); minor-units input when FX accounts land.
+- Auto-settle picks single closest pending settlement; partial/multi-group settlement splitting deferred.
+- Rejected-run exception purging/retention → Phase 7.
+
 ## Phase 5 — Analytics & Reporting
 ## Phase 6 — Provider integrations (Xendit/Midtrans sandbox, webhooks, sig verify, dedup)
 ## Phase 7 — Production hardening (security review, k6, observability, deploy)

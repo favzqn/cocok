@@ -4,7 +4,7 @@
 
 Import financial data from anywhere. Automatically reconcile everything. Investigate only what doesn't match.
 
-> Status: **Phase 0–3 complete** — identity, RBAC, multi-tenancy, CSV ingestion with dedup, reconciliation engine (scoring, match groups, approvals). See `IMPLEMENTATION_PLAN.md`.
+> Status: **Phase 0–4 complete** — identity, RBAC, multi-tenancy, CSV ingestion with dedup, reconciliation engine, exceptions queue, settlements with auto-settle. See `IMPLEMENTATION_PLAN.md`.
 
 ## Stack
 
