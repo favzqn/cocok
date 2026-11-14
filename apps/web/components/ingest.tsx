@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import {
   api,
+  canApproveMatches,
   canImport,
   canManageAccounts,
   formatMinor,
@@ -455,19 +456,74 @@ function ImportSection({ org }: { org: OrgSummary }) {
 
 
 function TransactionsSection({ org }: { org: OrgSummary }) {
+  const qc = useQueryClient();
+  const canMatch = canApproveMatches(org.role);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [msg, setMsg] = useState<{ ok: boolean; text: string }>();
+
   const txs = useQuery({
     queryKey: ["transactions", org.id],
     queryFn: () =>
       api<{ data: CanonicalTransaction[] }>(`/organizations/${org.id}/transactions?limit=20`),
   });
 
+  const manualMatch = useMutation({
+    mutationFn: () =>
+      api<{ id: string; status: string }>(`/organizations/${org.id}/reconciliation/groups`, {
+        method: "POST",
+        body: JSON.stringify({ transaction_ids: [...selected] }),
+      }),
+    onSuccess: () => {
+      setSelected(new Set());
+      setMsg({ ok: true, text: "Manual match approved." });
+      qc.invalidateQueries({ queryKey: ["transactions", org.id] });
+      qc.invalidateQueries({ queryKey: ["recon-groups", org.id] });
+      qc.invalidateQueries({ queryKey: ["report-summary", org.id] });
+    },
+    onError: (err) =>
+      setMsg({ ok: false, text: err instanceof Error ? err.message : "Match failed" }),
+  });
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  }
+
   return (
     <section
       id="transactions"
       className="scroll-mt-8 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)]"
     >
-      <div className="border-b border-[var(--color-line)] px-5 py-4 text-sm font-medium">
-        Canonical transactions
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-line)] px-5 py-4">
+        <span className="text-sm font-medium">Canonical transactions</span>
+        {canMatch && selected.size > 0 && (
+          <button
+            type="button"
+            disabled={manualMatch.isPending || selected.size < 2}
+            onClick={() => manualMatch.mutate()}
+            className="inline-flex h-8 items-center rounded-md bg-[var(--color-navy-900)] px-3 text-xs font-medium text-white hover:bg-[var(--color-navy-800)] disabled:opacity-60"
+          >
+            {manualMatch.isPending
+              ? "Matching…"
+              : `Manual match (${selected.size}) — must balance`}
+          </button>
+        )}
+      </div>
+      <div className="flex flex-col gap-3 px-5 pt-3">
+        {msg && (
+          <p
+            className={`text-sm ${msg.ok ? "text-[var(--color-ink-muted)]" : "text-[var(--color-alert)]"}`}
+          >
+            {msg.text}
+          </p>
+        )}
       </div>
       {txs.isPending && (
         <div className="px-5 py-6 text-sm text-[var(--color-ink-muted)]">Loading…</div>
@@ -487,27 +543,39 @@ function TransactionsSection({ org }: { org: OrgSummary }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[var(--color-line)] text-left text-xs uppercase tracking-wide text-[var(--color-ink-faint)]">
-                  <th className="px-5 py-2.5 font-medium">Booked</th>
-                  <th className="px-5 py-2.5 font-medium">Dir</th>
-                  <th className="px-5 py-2.5 text-right font-medium">Amount</th>
-                  <th className="px-5 py-2.5 font-medium">Description</th>
-                  <th className="px-5 py-2.5 font-medium">Ref</th>
+                  {canMatch && <th className="w-8 px-2 py-2.5" aria-label="Select" />}
+                  <th className="px-3 py-2.5 font-medium">Booked</th>
+                  <th className="px-3 py-2.5 font-medium">Dir</th>
+                  <th className="px-3 py-2.5 text-right font-medium">Amount</th>
+                  <th className="px-3 py-2.5 font-medium">Description</th>
+                  <th className="px-3 py-2.5 font-medium">Ref</th>
                 </tr>
               </thead>
               <tbody>
                 {txs.data.data.map((t) => (
                   <tr key={t.id} className="border-b border-[var(--color-line)] last:border-b-0">
-                    <td className="num px-5 py-3">
+                    {canMatch && (
+                      <td className="px-2 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(t.id)}
+                          onChange={() => toggle(t.id)}
+                          aria-label={`Select ${t.description}`}
+                          className="h-4 w-4 accent-[var(--color-navy-900)]"
+                        />
+                      </td>
+                    )}
+                    <td className="num px-3 py-3">
                       {new Date(t.booked_at).toLocaleDateString("id-ID")}
                     </td>
-                    <td className="px-5 py-3">{t.direction}</td>
-                    <td className="num px-5 py-3 text-right">
+                    <td className="px-3 py-3">{t.direction}</td>
+                    <td className="num px-3 py-3 text-right">
                       {formatMinor(t.amount_minor, t.currency)}
                     </td>
-                    <td className="max-w-64 truncate px-5 py-3 text-[var(--color-ink-muted)]">
+                    <td className="max-w-64 truncate px-3 py-3 text-[var(--color-ink-muted)]">
                       {t.description}
                     </td>
-                    <td className="num px-5 py-3 text-xs text-[var(--color-ink-faint)]">
+                    <td className="num px-3 py-3 text-xs text-[var(--color-ink-faint)]">
                       {t.external_ref ?? "—"}
                     </td>
                   </tr>
