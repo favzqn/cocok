@@ -40,11 +40,11 @@ Status legend: `[ ]` todo · `[~]` in progress · `[x]` done & verified (tests r
 - [x] Audit: `account.created/updated`, `import.uploaded/committed`
 - [x] API tests: happy path, preview-before-commit, double-commit 409, re-import dedup, bad-row preview, cross-tenant 404, viewer 403, finance_staff import OK / account-create 403
 - [x] Frontend: accounts panel, CSV upload + mapping selects + preview + commit, canonical transactions table
+- [x] XLSX upload (added later): `excelize` first-sheet → shared CSV pipeline, original bytes stored for reprocessing; server-side `GuessMapping` when client sends no mapping (xlsx has no readable header client-side)
 
 **Accept:** ✅ `go vet` + `go test ./...` green (unit + integration vs live Postgres); web typecheck green.
 
 Deferred within Phase 2 (documented):
-- XLSX import — needs `excelize` dependency; CSV covers current scope. Add when a real marketplace/gateway export requires it.
 - RLS (`SET app.current_org`) — all queries already filter `organization_id`; add FORCE RLS in Phase 7 hardening.
 - Object storage for raw files — BYTEA inline fine ≤10MB; move to S3 when files grow.
 - Org timezone override — parse uses Asia/Jakarta (product default) until org settings land.

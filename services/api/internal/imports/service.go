@@ -84,12 +84,46 @@ func (s *Service) Upload(ctx context.Context, orgID, actorID uuid.UUID, in Uploa
 	if err != nil {
 		return nil, err
 	}
-	rows, rowErrs, header, err := ParseCSV(in.Raw, in.Mapping, acc.Currency, loc)
+	parsable, err := loadParsable(in.Filename, in.Raw)
+	if err != nil {
+		return nil, err
+	}
+	m := in.Mapping
+	if strings.TrimSpace(m.Date) == "" || strings.TrimSpace(m.Amount) == "" {
+		// Server-side column guess (xlsx clients cannot read headers themselves).
+		header, herr := PeekHeaders(in.Filename, in.Raw)
+		if herr != nil {
+			return nil, herr
+		}
+		guess := GuessMapping(header)
+		if m.Date == "" {
+			m.Date = guess.Date
+		}
+		if m.Amount == "" {
+			m.Amount = guess.Amount
+		}
+		if m.Description == "" {
+			m.Description = guess.Description
+		}
+		if m.Counterparty == "" {
+			m.Counterparty = guess.Counterparty
+		}
+		if m.Direction == "" {
+			m.Direction = guess.Direction
+		}
+		if m.Reference == "" {
+			m.Reference = guess.Reference
+		}
+		if m.Date == "" || m.Amount == "" {
+			return nil, fmt.Errorf("%w: cannot guess date/amount columns from header %v — send mapping", platform.ErrValidation, header)
+		}
+	}
+	rows, rowErrs, header, err := ParseCSV(parsable, m, acc.Currency, loc)
 	if err != nil {
 		return nil, err
 	}
 
-	mapJSON, err := json.Marshal(in.Mapping)
+	mapJSON, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +157,7 @@ func (s *Service) Upload(ctx context.Context, orgID, actorID uuid.UUID, in Uploa
 			"valid": len(rows), "invalid": len(rowErrs),
 		},
 	})
-	return buildPreview(batch.ID, in.AccountID, batch.Filename, header, in.Mapping, rows, rowErrs), nil
+	return buildPreview(batch.ID, in.AccountID, batch.Filename, header, m, rows, rowErrs), nil
 }
 
 // Commit re-parses the stored raw file inside a transaction and inserts
@@ -152,7 +186,11 @@ func (s *Service) Commit(ctx context.Context, orgID, actorID, batchID uuid.UUID)
 	if err != nil {
 		return nil, err
 	}
-	rows, rowErrs, _, err := ParseCSV(batch.RawFile, m, acc.Currency, loc)
+	parsable, err := loadParsable(batch.Filename, batch.RawFile)
+	if err != nil {
+		return nil, err
+	}
+	rows, rowErrs, _, err := ParseCSV(parsable, m, acc.Currency, loc)
 	if err != nil {
 		return nil, err
 	}

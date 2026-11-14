@@ -289,11 +289,11 @@ function ImportSection({ org }: { org: OrgSummary }) {
             </select>
           </label>
           <label className="flex flex-col gap-1 text-xs text-[var(--color-ink-faint)]">
-            CSV file
+            CSV / Excel file
             <input
               ref={fileRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,.xlsx,text/csv"
               onChange={(e) => void onFileChange(e.target.files?.[0] ?? null)}
               className="text-sm text-[var(--color-ink)]"
             />
@@ -313,7 +313,7 @@ function ImportSection({ org }: { org: OrgSummary }) {
             Select an account first.
           </p>
         )}
-        {file && (!mapping.date || !mapping.amount) && (
+        {headers.length > 0 && (!mapping.date || !mapping.amount) && (
           <p className="text-xs text-[var(--color-alert)]">
             Map the Date and Amount columns below before uploading.
           </p>

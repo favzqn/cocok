@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/cocok/cocok/services/api/internal/imports"
 	"github.com/cocok/cocok/services/api/internal/platform"
@@ -65,12 +64,7 @@ func (h *ImportHandlers) Upload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if strings.TrimSpace(m.Date) == "" || strings.TrimSpace(m.Amount) == "" {
-		BadRequest(w, r, "mapping.date and mapping.amount are required", map[string]any{
-			"required": []string{"date", "amount"},
-		})
-		return
-	}
+	// Empty mapping is fine — the service guesses columns from the header.
 
 	prev, err := h.svc.Upload(r.Context(), orgID, u.ID, imports.UploadInput{
 		AccountID: accID,
