@@ -189,6 +189,30 @@ func (h *OrgHandlers) AcceptInvite(w http.ResponseWriter, r *http.Request) {
 	JSON(w, http.StatusOK, map[string]any{"organization": orgJSON(org), "role": role})
 }
 
+// Update patches org settings (name/timezone) — org:manage.
+func (h *OrgHandlers) Update(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := OrgFrom(r.Context())
+	u := UserFrom(r.Context())
+	var in organizations.UpdateSettingsInput
+	if err := Decode(r, &in); err != nil {
+		BadRequest(w, r, "invalid JSON body", nil)
+		return
+	}
+	org, err := h.svc.UpdateSettings(r.Context(), orgID, u.ID, in)
+	if err != nil {
+		switch {
+		case errors.Is(err, platform.ErrNotFound):
+			NotFound(w, r)
+		case errors.Is(err, platform.ErrValidation):
+			BadRequest(w, r, stripValidationPrefix(err), nil)
+		default:
+			Internal(w, r, h.log, err)
+		}
+		return
+	}
+	JSON(w, http.StatusOK, orgJSON(org))
+}
+
 func orgJSON(o *db.Organization) map[string]any {
 	return map[string]any{
 		"id":                o.ID.String(),

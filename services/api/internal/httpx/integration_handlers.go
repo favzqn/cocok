@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/cocok/cocok/services/api/internal/audit"
 	"github.com/cocok/cocok/services/api/internal/connectors"
 	"github.com/cocok/cocok/services/api/internal/integrations"
 	"github.com/cocok/cocok/services/api/internal/platform"
@@ -73,6 +74,26 @@ func (h *IntegrationHandlers) Disable(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	JSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+// AuditLogHandlers exposes the org's append-only audit trail.
+type AuditLogHandlers struct {
+	svc *audit.Writer
+	log *slog.Logger
+}
+
+func NewAuditLogHandlers(svc *audit.Writer, log *slog.Logger) *AuditLogHandlers {
+	return &AuditLogHandlers{svc: svc, log: log}
+}
+
+func (h *AuditLogHandlers) List(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := OrgFrom(r.Context())
+	rows, err := h.svc.List(r.Context(), orgID)
+	if err != nil {
+		Internal(w, r, h.log, err)
+		return
+	}
+	JSON(w, http.StatusOK, map[string]any{"data": rows})
 }
 
 // WebhookHandlers receives provider callbacks (no session — signature IS auth).

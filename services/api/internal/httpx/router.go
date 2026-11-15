@@ -23,6 +23,7 @@ type Deps struct {
 	Reports      *ReportHandlers
 	Integrations *IntegrationHandlers
 	Webhooks     *WebhookHandlers
+	AuditLogs    *AuditLogHandlers
 	OrgsSvc      *organizations.Service
 	DB           *pgxpool.Pool
 	Log          *slog.Logger
@@ -107,6 +108,7 @@ func NewRouter(d Deps) http.Handler {
 				r.Use(WithOrg(d.OrgsSvc))
 
 				r.Get("/", d.Orgs.Get)
+				r.With(RequirePermission("org:manage")).Patch("/", d.Orgs.Update)
 				r.Get("/members", d.Orgs.Members)
 				r.With(RequirePermission("member:manage")).Post("/invitations", d.Orgs.Invite)
 				r.With(RequirePermission("member:manage")).Patch("/members/role", d.Orgs.ChangeRole)
@@ -151,6 +153,8 @@ func NewRouter(d Deps) http.Handler {
 					r.With(RequirePermission("data:view")).Get("/summary", d.Reports.Summary)
 					r.With(RequirePermission("report:export")).Get("/export", d.Reports.Export)
 				})
+
+				r.With(RequirePermission("audit:view")).Get("/audit-logs", d.AuditLogs.List)
 
 				// Phase 6: provider integrations.
 				r.Route("/integrations", func(r chi.Router) {

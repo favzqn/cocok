@@ -2,6 +2,7 @@ package reports
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	db "github.com/cocok/cocok/services/api/internal/platform/db"
@@ -45,6 +46,15 @@ type AccountRollup struct {
 }
 
 // Summary aggregates the org's operational picture in one round-trip per table.
+// OrgTimezone resolves the tenant timezone for date-range parsing.
+func (s *Service) OrgTimezone(ctx context.Context, orgID uuid.UUID) string {
+	org, err := s.queries.GetOrganizationByID(ctx, orgID)
+	if err != nil || strings.TrimSpace(org.Timezone) == "" {
+		return "Asia/Jakarta"
+	}
+	return org.Timezone
+}
+
 func (s *Service) Summary(ctx context.Context, orgID uuid.UUID, from, to *time.Time) (*Summary, error) {
 	out := &Summary{
 		Groups:      map[string]int{},

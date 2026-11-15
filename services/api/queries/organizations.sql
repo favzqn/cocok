@@ -50,3 +50,8 @@ WHERE id = $1 AND accepted_at IS NULL;
 SELECT * FROM invitations
 WHERE organization_id = $1 AND accepted_at IS NULL AND expires_at > now()
 ORDER BY created_at DESC;
+
+-- name: UpdateOrganization :exec
+UPDATE organizations
+SET name = $2, timezone = $3, updated_at = now()
+WHERE id = $1;

@@ -80,7 +80,11 @@ func (s *Service) Upload(ctx context.Context, orgID, actorID uuid.UUID, in Uploa
 		return nil, platform.ErrNotFound
 	}
 
-	loc, err := loadLocation()
+	org, err := s.queries.GetOrganizationByID(ctx, orgID)
+	if err != nil {
+		return nil, platform.ErrNotFound
+	}
+	loc, err := loadLocation(org.Timezone)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +186,11 @@ func (s *Service) Commit(ctx context.Context, orgID, actorID, batchID uuid.UUID)
 	if err := json.Unmarshal(batch.Mapping, &m); err != nil {
 		return nil, fmt.Errorf("%w: corrupt mapping", platform.ErrValidation)
 	}
-	loc, err := loadLocation()
+	org, err := s.queries.GetOrganizationByID(ctx, orgID)
+	if err != nil {
+		return nil, platform.ErrNotFound
+	}
+	loc, err := loadLocation(org.Timezone)
 	if err != nil {
 		return nil, err
 	}
@@ -315,10 +323,11 @@ func buildPreview(batchID, accountID uuid.UUID, fname string, header []string, m
 	}
 }
 
-func loadLocation() (*time.Location, error) {
-	// Durable fact: default tenant timezone (PRODUCT.md). Org-level override
-	// lands with org settings.
-	loc, err := time.LoadLocation("Asia/Jakarta")
+func loadLocation(tz string) (*time.Location, error) {
+	if strings.TrimSpace(tz) == "" {
+		tz = "Asia/Jakarta" // product default (PRODUCT.md)
+	}
+	loc, err := time.LoadLocation(tz)
 	if err != nil {
 		return nil, fmt.Errorf("load Asia/Jakarta: %w", err)
 	}

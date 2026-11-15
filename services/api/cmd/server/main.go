@@ -82,6 +82,7 @@ func run(log *slog.Logger) error {
 		Exceptions:   httpx.NewExceptionHandlers(excSvc, log),
 		Settlements:  httpx.NewSettlementHandlers(setlSvc, log),
 		Reports:      httpx.NewReportHandlers(repSvc, log),
+		AuditLogs:    httpx.NewAuditLogHandlers(auditWriter, log),
 		Integrations: httpx.NewIntegrationHandlers(intgSvc, log),
 		Webhooks:     httpx.NewWebhookHandlers(whkSvc, log),
 		OrgsSvc:      orgSvc,

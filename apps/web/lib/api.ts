@@ -288,3 +288,26 @@ export function formatMinor(amountMinor: number, currency: string): string {
     maximumFractionDigits: decimals,
   }).format(major);
 }
+
+export type AuditLog = {
+  id: string;
+  action: string;
+  entity_type: string;
+  entity_id?: string;
+  actor_id?: string;
+  reason?: string;
+  new_state?: Record<string, unknown>;
+  created_at: string;
+};
+
+// audit:view = everyone but viewer.
+export function canViewAudit(role: string): boolean {
+  return role !== "viewer";
+}
+
+export const TIMEZONES = [
+  "Asia/Jakarta",
+  "Asia/Makassar",
+  "Asia/Jayapura",
+  "UTC",
+] as const;

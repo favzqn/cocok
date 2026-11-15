@@ -13,6 +13,8 @@ import { ExceptionsPanel } from "@/components/exceptions";
 import { SettlementsPanel } from "@/components/settlements";
 import { ReportsPanel } from "@/components/reports";
 import { IntegrationsPanel } from "@/components/integrations";
+import { AuditPanel } from "@/components/audit";
+import { SettingsPanel } from "@/components/settings";
 
 const ACTIVE_ORG_KEY = "cocok.activeOrgId";
 
@@ -113,6 +115,8 @@ export default function DashboardPage() {
           {activeOrg && <SettlementsPanel org={activeOrg} />}
           {activeOrg && <ReportsPanel org={activeOrg} />}
           {activeOrg && <IntegrationsPanel org={activeOrg} />}
+          {activeOrg && <AuditPanel org={activeOrg} />}
+          {activeOrg && <SettingsPanel org={activeOrg} />}
         </div>
       }
     />

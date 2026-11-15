@@ -29,3 +29,9 @@ UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL
 -- name: InsertAuditLog :exec
 INSERT INTO audit_logs (organization_id, actor_id, action, entity_type, entity_id, previous_state, new_state, reason, metadata)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+
+-- name: ListAuditLogs :many
+SELECT * FROM audit_logs
+WHERE organization_id = $1
+ORDER BY created_at DESC
+LIMIT 200;

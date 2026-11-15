@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/cocok/cocok/services/api/internal/platform"
 	db "github.com/cocok/cocok/services/api/internal/platform/db"
@@ -139,6 +140,49 @@ func (s *Service) Get(ctx context.Context, orgID uuid.UUID) (*db.Organization, e
 
 func (s *Service) ListMembers(ctx context.Context, orgID uuid.UUID) ([]db.ListMembersRow, error) {
 	return s.queries.ListMembers(ctx, orgID)
+}
+
+// UpdateSettings patches org profile fields (name, timezone).
+func (s *Service) UpdateSettings(ctx context.Context, orgID, actorID uuid.UUID, in UpdateSettingsInput) (*db.Organization, error) {
+	prev, err := s.Get(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	name := prev.Name
+	if in.Name != nil {
+		name = strings.TrimSpace(*in.Name)
+		if name == "" {
+			return nil, fmt.Errorf("%w: name cannot be empty", platform.ErrValidation)
+		}
+	}
+	tz := prev.Timezone
+	if in.Timezone != nil {
+		tz = strings.TrimSpace(*in.Timezone)
+		if _, err := time.LoadLocation(tz); err != nil {
+			return nil, fmt.Errorf("%w: unknown timezone", platform.ErrValidation)
+		}
+	}
+	if err := s.queries.UpdateOrganization(ctx, db.UpdateOrganizationParams{
+		ID: orgID, Name: name, Timezone: tz,
+	}); err != nil {
+		return nil, err
+	}
+	next, err := s.Get(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	s.audit.Write(ctx, AuditEvent{
+		OrganizationID: &orgID, ActorID: actorID,
+		Action: "org.updated", EntityType: "organization", EntityID: &orgID,
+		PreviousState: map[string]any{"name": prev.Name, "timezone": prev.Timezone},
+		NewState:      map[string]any{"name": next.Name, "timezone": next.Timezone},
+	})
+	return next, nil
+}
+
+type UpdateSettingsInput struct {
+	Name     *string `json:"name,omitempty"`
+	Timezone *string `json:"timezone,omitempty"`
 }
 
 func slugify(s string) string {

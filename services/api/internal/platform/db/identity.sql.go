@@ -169,6 +169,45 @@ func (q *Queries) InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) 
 	return err
 }
 
+const listAuditLogs = `-- name: ListAuditLogs :many
+SELECT id, organization_id, actor_id, action, entity_type, entity_id, previous_state, new_state, reason, metadata, created_at FROM audit_logs
+WHERE organization_id = $1
+ORDER BY created_at DESC
+LIMIT 200
+`
+
+func (q *Queries) ListAuditLogs(ctx context.Context, organizationID *uuid.UUID) ([]AuditLog, error) {
+	rows, err := q.db.Query(ctx, listAuditLogs, organizationID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AuditLog
+	for rows.Next() {
+		var i AuditLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrganizationID,
+			&i.ActorID,
+			&i.Action,
+			&i.EntityType,
+			&i.EntityID,
+			&i.PreviousState,
+			&i.NewState,
+			&i.Reason,
+			&i.Metadata,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const revokeAllUserSessions = `-- name: RevokeAllUserSessions :exec
 UPDATE sessions SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL
 `

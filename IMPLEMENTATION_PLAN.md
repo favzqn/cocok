@@ -135,6 +135,14 @@ application-layer tenancy enforced + tested; upgrade path = per-request
 `SET LOCAL` tx wrapper alongside non-superuser DB role rollout.
 
 
+## Post-MVP backlog (after Phase 7) ✅ done items
+- [x] XLSX import (excelize bridge + server-side column guess)
+- [x] Manual match UI (multi-select → balanced group)
+- [x] Exception resolve/dismiss notes
+- [x] Reports date-range `?from=&to=` + Recharts charts
+- [x] Audit Logs API (`audit:view`) + panel — nav enabled
+- [x] Org settings PATCH (name/timezone, `org:manage`) + panel; **org timezone now drives import date parsing and report ranges** (was hardcoded Asia/Jakarta) — nav enabled
+
 ---
 
 ## Testing Strategy (standing rules)

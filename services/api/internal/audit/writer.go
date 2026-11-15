@@ -68,6 +68,52 @@ func (w *Writer) WriteOrg(ctx context.Context, orgID *uuid.UUID, actorID uuid.UU
 	})
 }
 
+// LogEntry is the API view of an audit row.
+type LogEntry struct {
+	ID         string         `json:"id"`
+	Action     string         `json:"action"`
+	EntityType string         `json:"entity_type"`
+	EntityID   *string        `json:"entity_id,omitempty"`
+	ActorID    *string        `json:"actor_id,omitempty"`
+	Reason     *string        `json:"reason,omitempty"`
+	NewState   map[string]any `json:"new_state,omitempty"`
+	CreatedAt  interface{}    `json:"created_at"`
+}
+
+// List returns the org's audit trail (newest first, capped at 200).
+func (w *Writer) List(ctx context.Context, orgID uuid.UUID) ([]LogEntry, error) {
+	rows, err := w.queries.ListAuditLogs(ctx, &orgID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]LogEntry, 0, len(rows))
+	for _, r := range rows {
+		e := LogEntry{
+			ID:         r.ID.String(),
+			Action:     r.Action,
+			EntityType: r.EntityType,
+			CreatedAt:  r.CreatedAt,
+		}
+		if r.EntityID != nil {
+			v := r.EntityID.String()
+			e.EntityID = &v
+		}
+		if r.ActorID != nil {
+			v := r.ActorID.String()
+			e.ActorID = &v
+		}
+		if r.Reason.Valid {
+			v := r.Reason.String
+			e.Reason = &v
+		}
+		if len(r.NewState) > 0 {
+			_ = json.Unmarshal(r.NewState, &e.NewState)
+		}
+		out = append(out, e)
+	}
+	return out, nil
+}
+
 // OrgAdapter lets organizations.Service use this writer (avoids import cycle).
 type OrgAdapter struct{ W *Writer }
 

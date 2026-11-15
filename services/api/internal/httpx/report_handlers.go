@@ -23,11 +23,7 @@ func NewReportHandlers(svc *reports.Service, log *slog.Logger) *ReportHandlers {
 
 // parseRange reads ?from=&to= as YYYY-MM-DD (Asia/Jakarta). to is exclusive
 // next-day midnight; either side may be empty.
-func parseRange(r *http.Request) (from, to *time.Time, err error) {
-	loc, lerr := time.LoadLocation("Asia/Jakarta")
-	if lerr != nil {
-		return nil, nil, lerr
-	}
+func parseRange(r *http.Request, loc *time.Location) (from, to *time.Time, err error) {
 	if v := r.URL.Query().Get("from"); v != "" {
 		t, perr := time.ParseInLocation("2006-01-02", v, loc)
 		if perr != nil {
@@ -48,7 +44,11 @@ func parseRange(r *http.Request) (from, to *time.Time, err error) {
 
 func (h *ReportHandlers) Summary(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := OrgFrom(r.Context())
-	from, to, perr := parseRange(r)
+	loc, lerr := time.LoadLocation(h.svc.OrgTimezone(r.Context(), orgID))
+	if lerr != nil {
+		loc = time.UTC
+	}
+	from, to, perr := parseRange(r, loc)
 	if perr != nil {
 		BadRequest(w, r, "from/to must be YYYY-MM-DD", nil)
 		return
@@ -64,7 +64,11 @@ func (h *ReportHandlers) Summary(w http.ResponseWriter, r *http.Request) {
 // Export streams a CSV report as an attachment (?kind=transactions|matches|exceptions|settlements).
 func (h *ReportHandlers) Export(w http.ResponseWriter, r *http.Request) {
 	orgID, _ := OrgFrom(r.Context())
-	from, to, perr := parseRange(r)
+	loc, lerr := time.LoadLocation(h.svc.OrgTimezone(r.Context(), orgID))
+	if lerr != nil {
+		loc = time.UTC
+	}
+	from, to, perr := parseRange(r, loc)
 	if perr != nil {
 		BadRequest(w, r, "from/to must be YYYY-MM-DD", nil)
 		return

@@ -349,3 +349,20 @@ func (q *Queries) UpdateMemberRole(ctx context.Context, arg UpdateMemberRolePara
 	_, err := q.db.Exec(ctx, updateMemberRole, arg.OrganizationID, arg.UserID, arg.Role)
 	return err
 }
+
+const updateOrganization = `-- name: UpdateOrganization :exec
+UPDATE organizations
+SET name = $2, timezone = $3, updated_at = now()
+WHERE id = $1
+`
+
+type UpdateOrganizationParams struct {
+	ID       uuid.UUID
+	Name     string
+	Timezone string
+}
+
+func (q *Queries) UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) error {
+	_, err := q.db.Exec(ctx, updateOrganization, arg.ID, arg.Name, arg.Timezone)
+	return err
+}
