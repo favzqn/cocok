@@ -11,6 +11,7 @@ export function ExceptionsPanel({ org }: { org: OrgSummary }) {
   const [status, setStatus] = useState("open");
   const canResolve = canResolveExceptions(org.role);
   const [msg, setMsg] = useState<{ ok: boolean; text: string }>();
+  const [notes, setNotes] = useState<Record<string, string>>({});
 
   const exceptions = useQuery({
     queryKey: ["exceptions", org.id, status],
@@ -21,12 +22,19 @@ export function ExceptionsPanel({ org }: { org: OrgSummary }) {
   });
 
   const decide = useMutation({
-    mutationFn: (vars: { id: string; action: "resolve" | "dismiss" }) =>
+    mutationFn: (vars: { id: string; action: "resolve" | "dismiss"; note: string }) =>
       api<{ ok: boolean }>(
         `/organizations/${org.id}/exceptions/${vars.id}/${vars.action}`,
-        { method: "POST", body: JSON.stringify({}) },
+        { method: "POST", body: JSON.stringify({ note: vars.note || undefined }) },
       ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["exceptions", org.id] }),
+    onSuccess: (_data, vars) => {
+      setNotes((prev) => {
+        const next = { ...prev };
+        delete next[vars.id];
+        return next;
+      });
+      qc.invalidateQueries({ queryKey: ["exceptions", org.id] });
+    },
     onError: (err) =>
       setMsg({ ok: false, text: err instanceof Error ? err.message : "Failed" }),
   });
@@ -90,11 +98,22 @@ export function ExceptionsPanel({ org }: { org: OrgSummary }) {
                   )}
                 </div>
                 {e.status === "open" && canResolve && (
-                  <div className="flex shrink-0 gap-2">
+                  <div className="flex shrink-0 items-center gap-2">
+                    <input
+                      value={notes[e.id] ?? ""}
+                      onChange={(ev) =>
+                        setNotes((prev) => ({ ...prev, [e.id]: ev.target.value }))
+                      }
+                      placeholder="note (optional)"
+                      aria-label="Resolution note"
+                      className="h-8 w-40 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2 text-xs text-[var(--color-ink)]"
+                    />
                     <button
                       type="button"
                       disabled={decide.isPending}
-                      onClick={() => decide.mutate({ id: e.id, action: "resolve" })}
+                      onClick={() =>
+                        decide.mutate({ id: e.id, action: "resolve", note: notes[e.id] ?? "" })
+                      }
                       className="rounded-md bg-[var(--color-navy-900)] px-3 py-1 text-xs font-medium text-white hover:bg-[var(--color-navy-800)] disabled:opacity-60"
                     >
                       Resolve
@@ -102,7 +121,9 @@ export function ExceptionsPanel({ org }: { org: OrgSummary }) {
                     <button
                       type="button"
                       disabled={decide.isPending}
-                      onClick={() => decide.mutate({ id: e.id, action: "dismiss" })}
+                      onClick={() =>
+                        decide.mutate({ id: e.id, action: "dismiss", note: notes[e.id] ?? "" })
+                      }
                       className="rounded-md border border-[var(--color-line)] px-3 py-1 text-xs text-[var(--color-ink)] hover:bg-[var(--color-canvas)] disabled:opacity-60"
                     >
                       Dismiss

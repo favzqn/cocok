@@ -27,10 +27,18 @@ SELECT a.id, a.name, a.currency,
        )::int AS matched_count
 FROM financial_accounts a
 LEFT JOIN transactions t ON t.account_id = a.id
+    AND ($2::timestamptz IS NULL OR t.booked_at >= $2)
+    AND ($3::timestamptz IS NULL OR t.booked_at < $3)
 WHERE a.organization_id = $1
 GROUP BY a.id, a.name, a.currency
 ORDER BY a.name
 `
+
+type AccountRollupParams struct {
+	OrganizationID uuid.UUID
+	FromT          *time.Time
+	ToT            *time.Time
+}
 
 type AccountRollupRow struct {
 	ID           uuid.UUID
@@ -42,8 +50,8 @@ type AccountRollupRow struct {
 	MatchedCount int32
 }
 
-func (q *Queries) AccountRollup(ctx context.Context, organizationID uuid.UUID) ([]AccountRollupRow, error) {
-	rows, err := q.db.Query(ctx, accountRollup, organizationID)
+func (q *Queries) AccountRollup(ctx context.Context, arg AccountRollupParams) ([]AccountRollupRow, error) {
+	rows, err := q.db.Query(ctx, accountRollup, arg.OrganizationID, arg.FromT, arg.ToT)
 	if err != nil {
 		return nil, err
 	}
@@ -74,16 +82,24 @@ const exceptionSummaryByStatus = `-- name: ExceptionSummaryByStatus :many
 SELECT status, count(*)::int AS n
 FROM exceptions
 WHERE organization_id = $1
+  AND ($2::timestamptz IS NULL OR detected_at >= $2)
+  AND ($3::timestamptz IS NULL OR detected_at < $3)
 GROUP BY status
 `
+
+type ExceptionSummaryByStatusParams struct {
+	OrganizationID uuid.UUID
+	FromT          *time.Time
+	ToT            *time.Time
+}
 
 type ExceptionSummaryByStatusRow struct {
 	Status string
 	N      int32
 }
 
-func (q *Queries) ExceptionSummaryByStatus(ctx context.Context, organizationID uuid.UUID) ([]ExceptionSummaryByStatusRow, error) {
-	rows, err := q.db.Query(ctx, exceptionSummaryByStatus, organizationID)
+func (q *Queries) ExceptionSummaryByStatus(ctx context.Context, arg ExceptionSummaryByStatusParams) ([]ExceptionSummaryByStatusRow, error) {
+	rows, err := q.db.Query(ctx, exceptionSummaryByStatus, arg.OrganizationID, arg.FromT, arg.ToT)
 	if err != nil {
 		return nil, err
 	}
@@ -108,8 +124,16 @@ SELECT status,
        coalesce(avg(score), 0)::float AS avg_score
 FROM match_groups
 WHERE organization_id = $1
+  AND ($2::timestamptz IS NULL OR created_at >= $2)
+  AND ($3::timestamptz IS NULL OR created_at < $3)
 GROUP BY status
 `
+
+type GroupSummaryByStatusParams struct {
+	OrganizationID uuid.UUID
+	FromT          *time.Time
+	ToT            *time.Time
+}
 
 type GroupSummaryByStatusRow struct {
 	Status   string
@@ -117,8 +141,8 @@ type GroupSummaryByStatusRow struct {
 	AvgScore float64
 }
 
-func (q *Queries) GroupSummaryByStatus(ctx context.Context, organizationID uuid.UUID) ([]GroupSummaryByStatusRow, error) {
-	rows, err := q.db.Query(ctx, groupSummaryByStatus, organizationID)
+func (q *Queries) GroupSummaryByStatus(ctx context.Context, arg GroupSummaryByStatusParams) ([]GroupSummaryByStatusRow, error) {
+	rows, err := q.db.Query(ctx, groupSummaryByStatus, arg.OrganizationID, arg.FromT, arg.ToT)
 	if err != nil {
 		return nil, err
 	}
@@ -147,8 +171,16 @@ SELECT t.id, t.booked_at, t.direction, t.amount_minor, t.currency,
        ) AS matched
 FROM transactions t
 WHERE t.organization_id = $1
+  AND ($2::timestamptz IS NULL OR t.booked_at >= $2)
+  AND ($3::timestamptz IS NULL OR t.booked_at < $3)
 ORDER BY t.booked_at, t.id
 `
+
+type ListTransactionsExportParams struct {
+	OrganizationID uuid.UUID
+	FromT          *time.Time
+	ToT            *time.Time
+}
 
 type ListTransactionsExportRow struct {
 	ID           uuid.UUID
@@ -162,8 +194,8 @@ type ListTransactionsExportRow struct {
 	Matched      bool
 }
 
-func (q *Queries) ListTransactionsExport(ctx context.Context, organizationID uuid.UUID) ([]ListTransactionsExportRow, error) {
-	rows, err := q.db.Query(ctx, listTransactionsExport, organizationID)
+func (q *Queries) ListTransactionsExport(ctx context.Context, arg ListTransactionsExportParams) ([]ListTransactionsExportRow, error) {
+	rows, err := q.db.Query(ctx, listTransactionsExport, arg.OrganizationID, arg.FromT, arg.ToT)
 	if err != nil {
 		return nil, err
 	}
@@ -200,8 +232,16 @@ FROM match_group_items i
 JOIN match_groups g ON g.id = i.match_group_id
 JOIN transactions t ON t.id = i.transaction_id
 WHERE g.organization_id = $1 AND g.status = 'approved'
+  AND ($2::timestamptz IS NULL OR t.booked_at >= $2)
+  AND ($3::timestamptz IS NULL OR t.booked_at < $3)
 GROUP BY t.direction
 `
+
+type MatchedSummaryByDirectionParams struct {
+	OrganizationID uuid.UUID
+	FromT          *time.Time
+	ToT            *time.Time
+}
 
 type MatchedSummaryByDirectionRow struct {
 	Direction string
@@ -209,8 +249,8 @@ type MatchedSummaryByDirectionRow struct {
 	Total     int64
 }
 
-func (q *Queries) MatchedSummaryByDirection(ctx context.Context, organizationID uuid.UUID) ([]MatchedSummaryByDirectionRow, error) {
-	rows, err := q.db.Query(ctx, matchedSummaryByDirection, organizationID)
+func (q *Queries) MatchedSummaryByDirection(ctx context.Context, arg MatchedSummaryByDirectionParams) ([]MatchedSummaryByDirectionRow, error) {
+	rows, err := q.db.Query(ctx, matchedSummaryByDirection, arg.OrganizationID, arg.FromT, arg.ToT)
 	if err != nil {
 		return nil, err
 	}
@@ -236,8 +276,16 @@ SELECT status,
        coalesce(sum(settled_amount_minor), 0)::bigint AS settled_total
 FROM settlements
 WHERE organization_id = $1
+  AND ($2::timestamptz IS NULL OR expected_date >= $2)
+  AND ($3::timestamptz IS NULL OR expected_date < $3)
 GROUP BY status
 `
+
+type SettlementSummaryByStatusParams struct {
+	OrganizationID uuid.UUID
+	FromT          *time.Time
+	ToT            *time.Time
+}
 
 type SettlementSummaryByStatusRow struct {
 	Status        string
@@ -246,8 +294,8 @@ type SettlementSummaryByStatusRow struct {
 	SettledTotal  int64
 }
 
-func (q *Queries) SettlementSummaryByStatus(ctx context.Context, organizationID uuid.UUID) ([]SettlementSummaryByStatusRow, error) {
-	rows, err := q.db.Query(ctx, settlementSummaryByStatus, organizationID)
+func (q *Queries) SettlementSummaryByStatus(ctx context.Context, arg SettlementSummaryByStatusParams) ([]SettlementSummaryByStatusRow, error) {
+	rows, err := q.db.Query(ctx, settlementSummaryByStatus, arg.OrganizationID, arg.FromT, arg.ToT)
 	if err != nil {
 		return nil, err
 	}
@@ -277,8 +325,16 @@ SELECT direction,
        coalesce(sum(amount_minor), 0)::bigint AS total
 FROM transactions
 WHERE organization_id = $1
+  AND ($2::timestamptz IS NULL OR booked_at >= $2)
+  AND ($3::timestamptz IS NULL OR booked_at < $3)
 GROUP BY direction
 `
+
+type TxSummaryByDirectionParams struct {
+	OrganizationID uuid.UUID
+	FromT          *time.Time
+	ToT            *time.Time
+}
 
 type TxSummaryByDirectionRow struct {
 	Direction string
@@ -286,8 +342,8 @@ type TxSummaryByDirectionRow struct {
 	Total     int64
 }
 
-func (q *Queries) TxSummaryByDirection(ctx context.Context, organizationID uuid.UUID) ([]TxSummaryByDirectionRow, error) {
-	rows, err := q.db.Query(ctx, txSummaryByDirection, organizationID)
+func (q *Queries) TxSummaryByDirection(ctx context.Context, arg TxSummaryByDirectionParams) ([]TxSummaryByDirectionRow, error) {
+	rows, err := q.db.Query(ctx, txSummaryByDirection, arg.OrganizationID, arg.FromT, arg.ToT)
 	if err != nil {
 		return nil, err
 	}

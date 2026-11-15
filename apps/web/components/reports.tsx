@@ -1,6 +1,20 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   api,
   formatMinor,
@@ -12,14 +26,20 @@ import {
 const API = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 
 export function ReportsPanel({ org }: { org: OrgSummary }) {
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+
+  const range = (from ? `from=${from}` : "") + (from && to ? "&" : "") + (to ? `to=${to}` : "");
+  const rangeQS = range ? `?${range}` : "";
+
   const summary = useQuery({
-    queryKey: ["report-summary", org.id],
-    queryFn: () => api<ReportSummary>(`/organizations/${org.id}/reports/summary`),
+    queryKey: ["report-summary", org.id, from, to],
+    queryFn: () => api<ReportSummary>(`/organizations/${org.id}/reports/summary${rangeQS}`),
   });
 
   async function download(kind: string) {
     const res = await fetch(
-      `${API}/api/v1/organizations/${org.id}/reports/export?kind=${kind}`,
+      `${API}/api/v1/organizations/${org.id}/reports/export?kind=${kind}${range ? `&${range}` : ""}`,
       { credentials: "include" },
     );
     if (!res.ok) return;
@@ -46,6 +66,39 @@ export function ReportsPanel({ org }: { org: OrgSummary }) {
         Reports &amp; analytics
       </div>
       <div className="flex flex-col gap-5 px-5 py-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="flex flex-col gap-1 text-xs text-[var(--color-ink-faint)]">
+            From
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              className="h-9 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2 text-sm text-[var(--color-ink)]"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-[var(--color-ink-faint)]">
+            To (exclusive)
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              className="h-9 rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-2 text-sm text-[var(--color-ink)]"
+            />
+          </label>
+          {(from || to) && (
+            <button
+              type="button"
+              onClick={() => {
+                setFrom("");
+                setTo("");
+              }}
+              className="h-9 rounded-md border border-[var(--color-line)] px-3 text-xs text-[var(--color-ink-muted)] hover:bg-[var(--color-canvas)]"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
         {summary.isPending && (
           <div className="text-sm text-[var(--color-ink-muted)]">Loading summary…</div>
         )}
@@ -103,6 +156,57 @@ export function ReportsPanel({ org }: { org: OrgSummary }) {
                       {k.label}
                     </button>
                   ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-md border border-[var(--color-line)] p-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
+                  Value split
+                </div>
+                <div className="mt-2 h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "Credit in", value: s.transactions.total_credit_minor },
+                          { name: "Debit out", value: s.transactions.total_debit_minor },
+                        ]}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={50}
+                        outerRadius={80}
+                        label={({ name, value }) =>
+                          `${name}: ${formatMinor(Number(value), "IDR")}`
+                        }
+                      >
+                        <Cell fill="#0f766e" />
+                        <Cell fill="#b45309" />
+                      </Pie>
+                      <Tooltip />
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="rounded-md border border-[var(--color-line)] p-4">
+                <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
+                  Transactions per account (matched vs total)
+                </div>
+                <div className="mt-2 h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={s.accounts.map((a) => ({ name: a.name, total: a.tx_count, matched: a.matched_count }))}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis allowDecimals={false} tick={{ fontSize: 11 }} width={28} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="total" fill="#94a3b8" name="Total" />
+                      <Bar dataKey="matched" fill="#0f766e" name="Matched" />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
               </div>
             </div>

@@ -83,7 +83,7 @@ Deferred within Phase 3 (documented ceilings):
 **Accept:** ✅ `go vet` + `go test ./...` green (unit + integration vs live Postgres); web typecheck green.
 
 Deferred within Phase 4 (documented):
-- Exception notes on resolve/dismiss via UI (API accepts `note`; UI sends empty — prompt() not worth it until bulk actions).
+- ~~Exception notes UI~~ done: optional note input per open exception, sent with resolve/dismiss.
 - Settlement amount units in UI = major units (IDR no decimals); minor-units input when FX accounts land.
 - Auto-settle picks single closest pending settlement; partial/multi-group settlement splitting deferred.
 - Rejected-run exception purging/retention → Phase 7.
@@ -97,9 +97,9 @@ Deferred within Phase 4 (documented):
 **Accept:** ✅ `go vet` + `go test ./...` green; web typecheck green.
 
 Deferred within Phase 5 (documented):
-- Date-range filters on summary/export (whole-org only until period reporting lands).
+- ~~Date-range filters~~ done: `?from=&to=` (YYYY-MM-DD, Asia/Jakarta, to-exclusive) on summary + export, tested.
 - PDF/Excel export — CSV covers operator needs; add when clients demand.
-- Charts (Recharts in stack) — tables first; sparklines when history accumulates.
+- ~~Charts~~ done: Recharts value-split pie + per-account matched/total bars (existing summary data, no new endpoint).
 
 ## Phase 6 — Provider integrations & notifications ✅
 - [x] Migration: `integrations` (xendit/midtrans, mode `sandbox`, webhook_secret, default_account; unique active per provider+org), `webhook_events` (UNIQUE provider+event_key = dedup), `auth_tokens` (verify_email/reset_password, single-use, hashed), `email_outbox` (sandbox mailer)

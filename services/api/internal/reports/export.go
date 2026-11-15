@@ -13,10 +13,10 @@ import (
 )
 
 // Export renders one of the supported reports as CSV bytes.
-func (s *Service) Export(ctx context.Context, orgID uuid.UUID, kind string) (filename string, data []byte, err error) {
+func (s *Service) Export(ctx context.Context, orgID uuid.UUID, kind string, from, to *time.Time) (filename string, data []byte, err error) {
 	switch kind {
 	case "transactions":
-		return s.exportTransactions(ctx, orgID)
+		return s.exportTransactions(ctx, orgID, from, to)
 	case "matches":
 		return s.exportMatches(ctx, orgID)
 	case "exceptions":
@@ -47,8 +47,8 @@ func csvFile(base string, write func(w *csv.Writer) error) (string, []byte, erro
 	return name, buf.Bytes(), nil
 }
 
-func (s *Service) exportTransactions(ctx context.Context, orgID uuid.UUID) (string, []byte, error) {
-	rows, err := s.queries.ListTransactionsExport(ctx, orgID)
+func (s *Service) exportTransactions(ctx context.Context, orgID uuid.UUID, from, to *time.Time) (string, []byte, error) {
+	rows, err := s.queries.ListTransactionsExport(ctx, db.ListTransactionsExportParams{OrganizationID: orgID, FromT: from, ToT: to})
 	if err != nil {
 		return "", nil, err
 	}

@@ -2,6 +2,7 @@ package reports
 
 import (
 	"context"
+	"time"
 
 	db "github.com/cocok/cocok/services/api/internal/platform/db"
 	"github.com/google/uuid"
@@ -44,14 +45,14 @@ type AccountRollup struct {
 }
 
 // Summary aggregates the org's operational picture in one round-trip per table.
-func (s *Service) Summary(ctx context.Context, orgID uuid.UUID) (*Summary, error) {
+func (s *Service) Summary(ctx context.Context, orgID uuid.UUID, from, to *time.Time) (*Summary, error) {
 	out := &Summary{
 		Groups:      map[string]int{},
 		Exceptions:  map[string]int{},
 		Settlements: map[string]any{},
 	}
 
-	txs, err := s.queries.TxSummaryByDirection(ctx, orgID)
+	txs, err := s.queries.TxSummaryByDirection(ctx, db.TxSummaryByDirectionParams{OrganizationID: orgID, FromT: from, ToT: to})
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +65,7 @@ func (s *Service) Summary(ctx context.Context, orgID uuid.UUID) (*Summary, error
 		}
 	}
 
-	matched, err := s.queries.MatchedSummaryByDirection(ctx, orgID)
+	matched, err := s.queries.MatchedSummaryByDirection(ctx, db.MatchedSummaryByDirectionParams{OrganizationID: orgID, FromT: from, ToT: to})
 	if err != nil {
 		return nil, err
 	}
@@ -82,21 +83,21 @@ func (s *Service) Summary(ctx context.Context, orgID uuid.UUID) (*Summary, error
 		out.Matched.Rate = float64(out.Matched.Count) / float64(out.Transactions.TotalCount)
 	}
 
-	groups, err := s.queries.GroupSummaryByStatus(ctx, orgID)
+	groups, err := s.queries.GroupSummaryByStatus(ctx, db.GroupSummaryByStatusParams{OrganizationID: orgID, FromT: from, ToT: to})
 	if err != nil {
 		return nil, err
 	}
 	for _, r := range groups {
 		out.Groups[r.Status] = int(r.N)
 	}
-	exc, err := s.queries.ExceptionSummaryByStatus(ctx, orgID)
+	exc, err := s.queries.ExceptionSummaryByStatus(ctx, db.ExceptionSummaryByStatusParams{OrganizationID: orgID, FromT: from, ToT: to})
 	if err != nil {
 		return nil, err
 	}
 	for _, r := range exc {
 		out.Exceptions[r.Status] = int(r.N)
 	}
-	setl, err := s.queries.SettlementSummaryByStatus(ctx, orgID)
+	setl, err := s.queries.SettlementSummaryByStatus(ctx, db.SettlementSummaryByStatusParams{OrganizationID: orgID, FromT: from, ToT: to})
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +107,7 @@ func (s *Service) Summary(ctx context.Context, orgID uuid.UUID) (*Summary, error
 		}
 	}
 
-	accts, err := s.queries.AccountRollup(ctx, orgID)
+	accts, err := s.queries.AccountRollup(ctx, db.AccountRollupParams{OrganizationID: orgID, FromT: from, ToT: to})
 	if err != nil {
 		return nil, err
 	}

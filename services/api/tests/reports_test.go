@@ -118,3 +118,53 @@ func TestReportsSummaryAndExport(t *testing.T) {
 	}
 	_ = evilOrg
 }
+
+func TestReportsDateRange(t *testing.T) {
+	srv, _ := newTestServer(t)
+	owner := register(t, srv, "rep-range@test.id")
+	orgID := createOrg(t, owner, "Range Co")
+	// statement.csv dates: 05-01 (2 tx), 05-02 (1), 05-03 (1), 05-04..07 (4)
+	seedOppositePair(t, owner, orgID) // 05-01 credit + 05-02 debit
+	accID := createAccount(t, owner, orgID)
+	extra := "Tanggal,Keterangan,Nominal,Jenis,Ref\n2024-05-05,Late,7000,masuk,LATE-1\n2024-04-28,Early,8000,masuk,EARLY-1\n"
+	res, prev := uploadCSV(t, owner, orgID, accID, extra)
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("upload: %d", res.StatusCode)
+	}
+	owner.do("POST", "/api/v1/organizations/"+orgID+"/imports/"+prev["batch_id"].(string)+"/commit", nil)
+
+	// Full range (no filter): 4 tx
+	res, body := owner.do("GET", "/api/v1/organizations/"+orgID+"/reports/summary", nil)
+	if got := body["transactions"].(map[string]any)["total_count"].(float64); got != 4 {
+		t.Errorf("unfiltered total = %v, want 4", got)
+	}
+	// May only: 05-01..05-05 → 3 (excludes 04-28)
+	res, body = owner.do("GET", "/api/v1/organizations/"+orgID+"/reports/summary?from=2024-05-01&to=2024-05-06", nil)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("range summary: %d", res.StatusCode)
+	}
+	if got := body["transactions"].(map[string]any)["total_count"].(float64); got != 3 {
+		t.Errorf("may range total = %v, want 3", got)
+	}
+	// Single day 05-01: 1 tx (the seeded credit; debit is 05-02)
+	res, body = owner.do("GET", "/api/v1/organizations/"+orgID+"/reports/summary?from=2024-05-01&to=2024-05-01", nil)
+	if got := body["transactions"].(map[string]any)["total_count"].(float64); got != 1 {
+		t.Errorf("day total = %v, want 1", got)
+	}
+	// Bad date → 400
+	res, _ = owner.do("GET", "/api/v1/organizations/"+orgID+"/reports/summary?from=not-a-date", nil)
+	if res.StatusCode != http.StatusBadRequest {
+		t.Errorf("bad from: got %d, want 400", res.StatusCode)
+	}
+	// Export respects range
+	req, _ := http.NewRequest("GET", srv.URL+"/api/v1/organizations/"+orgID+"/reports/export?kind=transactions&from=2024-05-01&to=2024-05-06", nil)
+	req.Header.Add("Cookie", owner.cookie)
+	res2, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res2.Body.Close()
+	if res2.StatusCode != http.StatusOK {
+		t.Errorf("range export: %d", res2.StatusCode)
+	}
+}
