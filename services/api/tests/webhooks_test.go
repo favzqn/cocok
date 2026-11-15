@@ -105,6 +105,20 @@ func TestXenditWebhookFlow(t *testing.T) {
 		t.Errorf("tx count after dup = %d, want 1", n)
 	}
 
+	// Stored event visible via ops endpoint (dup delivery NOT double-stored)
+	res, evBody := owner.do("GET", "/api/v1/organizations/"+orgID+"/webhook-events", nil)
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("list events: %d", res.StatusCode)
+	}
+	events := evBody["data"].([]any)
+	if len(events) != 1 {
+		t.Fatalf("events = %d, want 1", len(events))
+	}
+	ev := events[0].(map[string]any)
+	if ev["status"] != "processed" || ev["event_key"] != "evt-123" {
+		t.Errorf("event = %v", ev)
+	}
+
 	// Unknown integration → 404
 	res, _ = postWebhook(t, owner, "/api/v1/webhooks/xendit/00000000-0000-0000-0000-000000000000",
 		map[string]string{"X-Callback-Token": xenditSecret}, payload)

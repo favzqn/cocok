@@ -311,3 +311,14 @@ export const TIMEZONES = [
   "Asia/Jayapura",
   "UTC",
 ] as const;
+
+export type WebhookEvent = {
+  id: string;
+  provider: string;
+  event_key: string;
+  event_type: string;
+  status: string;
+  reason?: string;
+  transaction_id?: string;
+  created_at: string;
+};

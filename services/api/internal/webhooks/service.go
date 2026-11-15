@@ -201,3 +201,40 @@ func (s *Service) txIDByFingerprint(ctx context.Context, orgID, accID uuid.UUID,
 	}
 	return &id, nil
 }
+
+// Event is the API view of a stored webhook event.
+type Event struct {
+	ID        string      `json:"id"`
+	Provider  string      `json:"provider"`
+	EventKey  string      `json:"event_key"`
+	EventType string      `json:"event_type"`
+	Status    string      `json:"status"`
+	Reason    *string     `json:"reason,omitempty"`
+	TxID      *string     `json:"transaction_id,omitempty"`
+	CreatedAt interface{} `json:"created_at"`
+}
+
+// ListEvents returns recent webhook deliveries for the org (ops visibility).
+func (s *Service) ListEvents(ctx context.Context, orgID uuid.UUID) ([]Event, error) {
+	rows, err := s.queries.ListWebhookEvents(ctx, orgID)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]Event, 0, len(rows))
+	for _, r := range rows {
+		e := Event{
+			ID: r.ID.String(), Provider: r.Provider, EventKey: r.EventKey,
+			EventType: r.EventType, Status: r.Status, CreatedAt: r.CreatedAt,
+		}
+		if r.Reason.Valid {
+			v := r.Reason.String
+			e.Reason = &v
+		}
+		if r.TransactionID != nil {
+			v := r.TransactionID.String()
+			e.TxID = &v
+		}
+		out = append(out, e)
+	}
+	return out, nil
+}

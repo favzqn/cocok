@@ -155,6 +155,7 @@ func NewRouter(d Deps) http.Handler {
 				})
 
 				r.With(RequirePermission("audit:view")).Get("/audit-logs", d.AuditLogs.List)
+				r.With(RequirePermission("data:view")).Get("/webhook-events", d.Webhooks.ListEvents)
 
 				// Phase 6: provider integrations.
 				r.Route("/integrations", func(r chi.Router) {

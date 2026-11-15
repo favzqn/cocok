@@ -8,6 +8,7 @@ import {
   type FinancialAccount,
   type Integration,
   type OrgSummary,
+  type WebhookEvent,
 } from "@/lib/api";
 
 export function IntegrationsPanel({ org }: { org: OrgSummary }) {
@@ -22,6 +23,10 @@ export function IntegrationsPanel({ org }: { org: OrgSummary }) {
   const integrations = useQuery({
     queryKey: ["integrations", org.id],
     queryFn: () => api<{ data: Integration[] }>(`/organizations/${org.id}/integrations`),
+  });
+  const events = useQuery({
+    queryKey: ["webhook-events", org.id],
+    queryFn: () => api<{ data: WebhookEvent[] }>(`/organizations/${org.id}/webhook-events`),
   });
   const accounts = useQuery({
     queryKey: ["accounts", org.id],
@@ -129,6 +134,49 @@ export function IntegrationsPanel({ org }: { org: OrgSummary }) {
             ))}
           </ul>
         )}
+
+        <div className="border-t border-[var(--color-line)] pt-4">
+          <div className="text-xs font-semibold uppercase tracking-wide text-[var(--color-ink-faint)]">
+            Recent webhook deliveries
+          </div>
+          {events.isPending && (
+            <div className="mt-2 text-sm text-[var(--color-ink-muted)]">Loading…</div>
+          )}
+          {events.isSuccess && events.data.data.length === 0 && (
+            <div className="mt-2 text-sm text-[var(--color-ink-muted)]">
+              No webhooks received yet — paste the URL into the provider sandbox dashboard.
+            </div>
+          )}
+          {events.isSuccess && events.data.data.length > 0 && (
+            <ul className="mt-2">
+              {events.data.data.slice(0, 8).map((ev) => (
+                <li key={ev.id} className="num flex flex-wrap justify-between gap-2 py-1 text-xs">
+                  <span className="text-[var(--color-ink-muted)]">
+                    {new Date(ev.created_at).toLocaleString("id-ID")} · {ev.provider} ·{" "}
+                    {ev.event_type || "—"}
+                  </span>
+                  <span className="truncate">
+                    {ev.event_key}
+                    <span
+                      className={`ml-2 rounded border px-1.5 py-0.5 uppercase ${
+                        ev.status === "processed"
+                          ? "border-emerald-600/40 text-emerald-700"
+                          : ev.status === "ignored"
+                            ? "border-amber-600/40 text-amber-700"
+                            : "border-red-600/40 text-red-700"
+                      }`}
+                    >
+                      {ev.status}
+                    </span>
+                    {ev.reason && (
+                      <span className="ml-2 text-[var(--color-ink-faint)]">{ev.reason}</span>
+                    )}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         {manage && (
           <form

@@ -131,3 +131,14 @@ func (h *WebhookHandlers) Receive(w http.ResponseWriter, r *http.Request) {
 	}
 	JSON(w, res.Status, res)
 }
+
+// ListEvents exposes stored webhook deliveries (data:view).
+func (h *WebhookHandlers) ListEvents(w http.ResponseWriter, r *http.Request) {
+	orgID, _ := OrgFrom(r.Context())
+	rows, err := h.svc.ListEvents(r.Context(), orgID)
+	if err != nil {
+		Internal(w, r, h.log, err)
+		return
+	}
+	JSON(w, http.StatusOK, map[string]any{"data": rows})
+}
